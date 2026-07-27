@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, platform } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, posix, resolve, win32 } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, cwd, exit, stdout, stderr } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -278,8 +278,22 @@ function hasCmd(name) {
 	return probe.status === 0;
 }
 
+export function resolveAgentConfigDir(configured, home = homedir(), platformName = platform()) {
+	const joinPath = platformName === "win32" ? win32.join : posix.join;
+	if (!configured) return joinPath(home, ".pi", "agent");
+	if (configured === "~") return home;
+	if (configured.startsWith("~/") || (platformName === "win32" && configured.startsWith("~\\"))) {
+		return joinPath(home, configured.slice(2));
+	}
+	return configured;
+}
+
+function agentConfigDir() {
+	return resolveAgentConfigDir(process.env.PI_CODING_AGENT_DIR);
+}
+
 function settingsPath(local) {
-	return local ? join(cwd(), ".pi", "settings.json") : join(homedir(), ".pi", "agent", "settings.json");
+	return local ? join(cwd(), ".pi", "settings.json") : join(agentConfigDir(), "settings.json");
 }
 
 // Builtin pi-subagents agents that hardcode a specific model — blank them out
@@ -409,7 +423,7 @@ function reportLoadOrderNormalization(result, interactive) {
 }
 
 function compoundInstallRoot(local) {
-	return local ? join(cwd(), ".pi") : join(homedir(), ".pi", "agent");
+	return local ? join(cwd(), ".pi") : agentConfigDir();
 }
 
 function readJsonFileWithMetadata(path) {
@@ -772,9 +786,9 @@ function readJsonSafe(path) {
 // ---------------------------------------------------------------------------
 // Auth detection (read-only)
 // ---------------------------------------------------------------------------
-// Pi reads credentials from ~/.pi/agent/auth.json and also honors provider
-// env vars. LazyPi never writes credentials itself — we just report what's
-// there so the user knows whether to run `pi /login` first.
+// Pi reads credentials from auth.json in its agent config directory and also
+// honors provider env vars. LazyPi reports the available credentials so users
+// know whether to run `pi /login` first.
 const AUTH_ENV_VARS = [
 	["ANTHROPIC_API_KEY", "anthropic"],
 	["OPENAI_API_KEY", "openai"],
@@ -787,7 +801,7 @@ const AUTH_ENV_VARS = [
 ];
 
 function authJsonPath() {
-	return join(homedir(), ".pi", "agent", "auth.json");
+	return join(agentConfigDir(), "auth.json");
 }
 
 function detectAuth() {
@@ -945,7 +959,7 @@ async function cmdInstall(flags) {
 		return !isPackageInstalled(pkg, installedSources, flags.local) && isPackagePresent(pkg, installedSources, flags.local);
 	});
 	const installLabel = legacyInstalled.length > 0 ? `${toInstall.length} (${legacyInstalled.length} migration${legacyInstalled.length === 1 ? "" : "s"})` : String(toInstall.length);
-	const scope = flags.local ? "project (.pi/settings.json)" : "global (~/.pi/agent/settings.json)";
+	const scope = flags.local ? "project (.pi/settings.json)" : `global (${settingsPath(false)})`;
 
 	const preInstallAuth = detectAuth();
 	const summary = [
