@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows-full:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
 
       - name: Install pi
         run: npm install -g @earendil-works/pi-coding-agent
@@ -35,40 +32,8 @@ jobs:
       - name: Run lazypi --yes
         run: node bin/lazypi.mjs --yes
 
-      - name: Assert expected packages for full install
+      - name: Assert expected packages
         run: node scripts/assert-installed-packages.mjs --check-status
 
       - name: Doctor passes on Windows
-        run: node bin/lazypi.mjs doctor
-
-  windows-except-compound:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install pi
-        run: npm install -g @earendil-works/pi-coding-agent
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Run tests without compound integration
-        run: npm test
-        env:
-          LAZYPI_SKIP_COMPOUND_INTEGRATION: "1"
-
-      - name: Smoke-test packed CLI artifact
-        run: node scripts/packed-cli-smoke.mjs
-
-      - name: Run lazypi --yes --except compound
-        run: node bin/lazypi.mjs --yes --except compound
-
-      - name: Assert expected packages for all except compound
-        run: node scripts/assert-installed-packages.mjs --except=compound --check-status
-
-      - name: Doctor passes on Windows without bun
         run: node bin/lazypi.mjs doctor

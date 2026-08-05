@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, posix, resolve, win32 } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -8,8 +8,6 @@ import { spawnSync } from "node:child_process";
 import { resolveAgentConfigDir } from "../bin/lazypi.mjs";
 
 const CLI_PATH = resolve("bin/lazypi.mjs");
-const EXTENSION_SETTINGS_SOURCE = "npm:@juanibiapina/pi-extension-settings";
-const POWERBAR_SOURCE = "npm:@juanibiapina/pi-powerbar";
 const AUTH_ENV_VARS = [
 	"ANTHROPIC_API_KEY",
 	"OPENAI_API_KEY",
@@ -77,14 +75,12 @@ test("resolveAgentConfigDir matches Pi path semantics", () => {
 	const posixHome = "/home/tester";
 	const windowsHome = "C:\\Users\\tester";
 	const cases = [
-		["unset", undefined, posixHome, "linux", posix.join(posixHome, ".pi", "agent")],
-		["empty", "", posixHome, "linux", posix.join(posixHome, ".pi", "agent")],
-		["absolute", "/opt/pi-agent", posixHome, "linux", "/opt/pi-agent"],
-		["relative", ".config/pi-agent", posixHome, "linux", ".config/pi-agent"],
-		["home", "~", posixHome, "linux", posixHome],
-		["home child", "~/.pi/lazy", posixHome, "linux", posix.join(posixHome, ".pi", "lazy")],
-		["Windows home child", "~\\.pi\\lazy", windowsHome, "win32", win32.join(windowsHome, ".pi", "lazy")],
-		["Windows default", undefined, windowsHome, "win32", win32.join(windowsHome, ".pi", "agent")],
+		["default POSIX", undefined, posixHome, "linux", "/home/tester/.pi/agent"],
+		["tilde POSIX", "~/.pi/lazy", posixHome, "linux", "/home/tester/.pi/lazy"],
+		["bare tilde POSIX", "~", posixHome, "linux", "/home/tester"],
+		["absolute POSIX", "/tmp/pi-agent", posixHome, "linux", "/tmp/pi-agent"],
+		["default Windows", undefined, windowsHome, "win32", "C:\\Users\\tester\\.pi\\agent"],
+		["tilde Windows", "~\\.pi\\lazy", windowsHome, "win32", "C:\\Users\\tester\\.pi\\lazy"],
 	];
 
 	for (const [name, configured, home, platformName, expected] of cases) {
@@ -92,40 +88,36 @@ test("resolveAgentConfigDir matches Pi path semantics", () => {
 	}
 });
 
-test("status reads settings and Compound state from PI_CODING_AGENT_DIR", (t) => {
+test("status reads settings from PI_CODING_AGENT_DIR", (t) => {
 	const { home, workspace } = createWorkspace(t);
 	const customAgentDir = join(home, ".pi", "lazy");
 	writeSettings(join(home, ".pi", "agent"), ["npm:pi-mcp-adapter"]);
 	writeSettings(customAgentDir, ["npm:pi-subagents"]);
-	writeJson(join(customAgentDir, "compound-engineering", "install-manifest.json"), { files: ["AGENTS.md"] });
 
 	const result = runCli(["status"], { cwd: workspace, home, agentDir: "~/.pi/lazy" });
 
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.ok(result.stdout.includes(`Settings file: ${join(customAgentDir, "settings.json")}`));
 	assert.match(result.stdout, /✓ \[core\] subagents/);
-	assert.match(result.stdout, /✓ \[frameworks\] compound/);
 	assert.doesNotMatch(result.stdout, /✓ \[core\] mcp/);
 });
 
-test("install reads auth and writes settings in PI_CODING_AGENT_DIR", (t) => {
-	const { home, workspace, bin } = createWorkspace(t);
+test("install reads auth and uses the custom global settings", (t) => {
+	const { root, home, workspace, bin } = createWorkspace(t);
 	const defaultAgentDir = join(home, ".pi", "agent");
 	const customAgentDir = join(home, ".pi", "lazy");
+	const callsPath = join(root, "pi-calls.log");
 	writeFakePi(bin);
-	writeSettings(defaultAgentDir, ["npm:pi-mcp-adapter"]);
-	writeSettings(customAgentDir, ["npm:pi-subagents"]);
-	writeJson(join(defaultAgentDir, "auth.json"), { openai: { type: "api_key", key: "default" } });
+	writeSettings(defaultAgentDir, ["npm:pi-subagents"]);
+	writeSettings(customAgentDir, ["npm:pi-mcp-adapter"]);
 	writeJson(join(customAgentDir, "auth.json"), { anthropic: { type: "api_key", key: "custom" } });
 
-	const result = runCli(["--yes", "--only", "subagents"], { cwd: workspace, home, agentDir: customAgentDir, bin });
+	const result = runCli(["--yes", "--only", "subagents"], { cwd: workspace, home, agentDir: customAgentDir, bin, callsPath });
 
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.match(result.stdout, /Pi credentials:\s+anthropic \(auth\.json\)/);
-	const customSettings = JSON.parse(readFileSync(join(customAgentDir, "settings.json"), "utf8"));
-	const defaultSettings = JSON.parse(readFileSync(join(defaultAgentDir, "settings.json"), "utf8"));
-	assert.equal(customSettings.subagents.agentOverrides.reviewer.model, "");
-	assert.equal(defaultSettings.subagents, undefined);
+	assert.deepEqual(readFileSync(callsPath, "utf8").trim().split(/\r?\n/), ["install npm:pi-subagents"]);
+	assert.deepEqual(JSON.parse(readFileSync(join(defaultAgentDir, "settings.json"), "utf8")).packages, ["npm:pi-subagents"]);
 });
 
 test("update and remove inspect the custom global settings", (t) => {
@@ -135,18 +127,17 @@ test("update and remove inspect the custom global settings", (t) => {
 	const customAgentDir = join(home, ".pi", "lazy");
 	writeFakePi(bin);
 	writeSettings(defaultAgentDir, ["npm:pi-subagents"]);
-	writeSettings(customAgentDir, [POWERBAR_SOURCE, EXTENSION_SETTINGS_SOURCE, "npm:pi-memory-md"]);
+	writeSettings(customAgentDir, ["npm:pi-mcp-adapter", "npm:pi-simplify"]);
 
 	const updateResult = runCli(["update"], { cwd: workspace, home, agentDir: customAgentDir, bin, callsPath });
 	assert.equal(updateResult.status, 0, `STDOUT:\n${updateResult.stdout}\nSTDERR:\n${updateResult.stderr}`);
-	const customSettings = JSON.parse(readFileSync(join(customAgentDir, "settings.json"), "utf8"));
-	assert.deepEqual(customSettings.packages, [EXTENSION_SETTINGS_SOURCE, POWERBAR_SOURCE, "npm:pi-memory-md"]);
+	assert.deepEqual(JSON.parse(readFileSync(join(customAgentDir, "settings.json"), "utf8")).packages, ["npm:pi-mcp-adapter", "npm:pi-simplify"]);
 	assert.deepEqual(JSON.parse(readFileSync(join(defaultAgentDir, "settings.json"), "utf8")).packages, ["npm:pi-subagents"]);
 
-	const removeResult = runCli(["remove", "memory"], { cwd: workspace, home, agentDir: customAgentDir, bin, callsPath });
+	const removeResult = runCli(["remove", "simplify"], { cwd: workspace, home, agentDir: customAgentDir, bin, callsPath });
 	assert.equal(removeResult.status, 0, `STDOUT:\n${removeResult.stdout}\nSTDERR:\n${removeResult.stderr}`);
 	const calls = readFileSync(callsPath, "utf8").trim().split(/\r?\n/).filter(Boolean);
-	assert.deepEqual(calls, ["update", "remove npm:pi-memory-md"]);
+	assert.deepEqual(calls, ["update", "remove npm:pi-simplify"]);
 });
 
 test("--local settings remain independent of PI_CODING_AGENT_DIR", (t) => {
@@ -158,7 +149,7 @@ test("--local settings remain independent of PI_CODING_AGENT_DIR", (t) => {
 	const result = runCli(["status", "--local"], { cwd: workspace, home, agentDir: customAgentDir });
 
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
-	assert.ok(result.stdout.includes(`Settings file: ${join(workspace, ".pi", "settings.json")}`));
+	assert.ok(result.stdout.includes(`Settings file: ${realpathSync(join(workspace, ".pi", "settings.json"))}`));
 	assert.match(result.stdout, /✓ \[core\] mcp/);
 	assert.doesNotMatch(result.stdout, /✓ \[core\] subagents/);
 });

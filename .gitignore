@@ -2,7 +2,4 @@ node_modules/
 .pi/
 site/generated-themes/vhs-settings/
 .DS_Store
-docs/_site/
-docs/.jekyll-cache/
-docs/.jekyll-metadata
-docs/Gemfile.lock
+.codegraph/

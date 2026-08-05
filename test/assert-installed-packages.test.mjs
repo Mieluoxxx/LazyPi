@@ -4,19 +4,17 @@ import assert from "node:assert/strict";
 import { PACKAGES } from "../bin/lazypi.mjs";
 import { expectedPackageSources, packageSourcesFromSettings } from "../scripts/assert-installed-packages.mjs";
 
-test("expectedPackageSources matches full catalog except compound's unmanaged source", () => {
+test("expectedPackageSources matches the full catalog", () => {
 	const expected = expectedPackageSources();
-
-	assert.equal(expected.includes("npm:@every-env/compound-plugin"), false);
-	assert.equal(expected.length, PACKAGES.length - 1);
+	assert.deepEqual(expected, PACKAGES.filter((pkg) => typeof pkg.source === "string").map((pkg) => pkg.source));
 });
 
 test("expectedPackageSources supports excluded package ids", () => {
-	const expected = expectedPackageSources({ except: ["compound", "pi-ask-user"] });
-
-	assert.equal(expected.includes("npm:@every-env/compound-plugin"), false);
-	assert.equal(expected.includes("npm:pi-ask-user"), false);
-	assert.equal(expected.length, PACKAGES.length - 2);
+	const extensionCount = PACKAGES.filter((pkg) => typeof pkg.source === "string").length;
+	const excludedId = PACKAGES[0].id;
+	const expected = expectedPackageSources({ except: [excludedId] });
+	assert.equal(expected.includes(PACKAGES[0].source), false);
+	assert.equal(expected.length, extensionCount - 1);
 });
 
 test("packageSourcesFromSettings reads string and object package entries", () => {

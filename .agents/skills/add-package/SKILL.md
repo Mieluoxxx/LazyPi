@@ -83,9 +83,9 @@ LazyPi currently uses these categories in `bin/lazypi.mjs`:
 
 - `core`
 - `ui`
-- `research`
-- `frameworks`
-- `themes`
+- `tools`
+- `themes` — file-based themes shipped under `themes/`; add a `themeFiles` array pointing at the JSON files and install them with `install` (they copy into Pi's agent themes directory and are backed up before overwrite)
+- `config` — agent config files shipped under `agent/`; add an `agentFiles` array pointing at the files (for example `agent/AGENTS.md`) and install them with `install` (they copy to the Pi agent root and are backed up before overwrite)
 
 Choose the single best fit.
 

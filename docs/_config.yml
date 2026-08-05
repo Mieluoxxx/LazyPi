@@ -1,9 +1,0 @@
-title: LazyPi
-description: One command. Full Pi setup.
-url: https://lazypi.org
-baseurl: ""
-exclude:
-  - plans/
-  - Gemfile
-  - Gemfile.lock
-  - .jekyll-cache/

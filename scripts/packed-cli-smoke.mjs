@@ -32,7 +32,7 @@ export function runPackedCliSmoke({ cwd = process.cwd() } = {}) {
 	try {
 		const smoke = run(npm, ["exec", "--yes", `--package=${tarballPath}`, "--call", "lazypi --help"], { cwd });
 		assert.equal(smoke.status, 0, `packed CLI smoke failed\n${resultSummary(smoke)}`);
-		assert.match(smoke.stdout, /lazypi — opinionated installer for Pi extensions/);
+		assert.match(smoke.stdout, /lazypi — personal Pi extension manager/);
 		assert.match(smoke.stdout, /Usage:/);
 		return { pack, smoke, tarballPath };
 	} finally {

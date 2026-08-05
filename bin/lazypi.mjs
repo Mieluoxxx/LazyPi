@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { basename, dirname, join, posix, resolve, win32 } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, cwd, exit, stdout, stderr } from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	cancel as clackCancel,
 	confirm as clackConfirm,
@@ -20,64 +20,83 @@ import {
 // ---------------------------------------------------------------------------
 // Catalog
 // ---------------------------------------------------------------------------
-// Categories. LazyPi installs every package by default — "lazy" means you get
-// the whole thing without thinking. Use the interactive picker or --only /
-// --except to narrow it.
-const CATEGORIES = ["core", "ui", "research", "frameworks", "themes"];
 
+// Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
-	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
-	{ id: "pi-ask-user", category: "core", source: "npm:pi-ask-user", description: "Ask-user prompts", hint: "Interactive user questions for agent workflows." },
-	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
+	// core
 	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching." },
-	{
-		id: "memory",
-		category: "core",
-		source: "git:github.com/VandeeFeng/pi-memory-md",
-		legacySources: ["npm:pi-memory-md"],
-		description: "Markdown-backed memory",
-		hint: "Persistent memory stored as Markdown files.",
-	},
-	{ id: "plan", category: "core", source: "npm:@devkade/pi-plan", description: "/plan command", hint: "Read-only planning mode with approval-based execution." },
-	{ id: "simplify", category: "core", source: "npm:pi-simplify", description: "Code simplify review", hint: "Reviews recently changed code for clarity, consistency, and maintainability." },
-	{ id: "add-dir", category: "core", source: "npm:pi-add-dir", description: "Add external directories", hint: "Load configs and skills from additional project directories in the same Pi session." },
-	{ id: "prompt-templates", category: "core", source: "npm:pi-prompt-template-model", description: "Prompt template model switching", hint: "Add model, skill, and thinking frontmatter so prompt templates switch modes automatically." },
-	{ id: "claude-cli", category: "core", source: "npm:pi-claude-cli", description: "Claude Code CLI provider", hint: "Use Claude Code CLI auth as a Pi model provider." },
-	{ id: "plannotator", category: "ui", source: "npm:@plannotator/pi-extension", description: "Planning and annotation workflow", hint: "Plan + annotate large changes interactively." },
-	{ id: "slopchop", category: "ui", source: "npm:pi-slopchop", description: "Diff review and annotation", hint: "Review diffs inside Pi and turn FIX/DISCUSS annotations into the next prompt." },
-	{ id: "extension-settings", category: "ui", source: "npm:@juanibiapina/pi-extension-settings", description: "Settings support for powerbar", hint: "Required by powerbar for its settings panel." },
-	{ id: "powerbar", category: "ui", source: "npm:@juanibiapina/pi-powerbar", description: "Powerbar UI", hint: "Status line for Pi with live context." },
-	{ id: "usage", category: "ui", source: "npm:@tmustier/pi-usage-extension", description: "Usage and cost dashboard", hint: "Track token usage and API cost in-session." },
-	{ id: "raw-paste", category: "ui", source: "npm:@tmustier/pi-raw-paste", description: "Raw paste command", hint: "Paste raw clipboard content without Pi re-interpreting it." },
-	{ id: "todos", category: "ui", source: "git:github.com/tintinweb/pi-manage-todo-list@b75c449aa85ce328e9a8b632f62bf642aed40359", description: "Todo list management", hint: "Track multi-step work with live progress widget and session persistence." },
-	{ id: "btw", category: "ui", source: "npm:pi-btw", description: "Side-chat popover", hint: "Ask quick questions without polluting your conversation history." },
-	{ id: "interactive-shell", category: "ui", source: "npm:pi-interactive-shell", description: "Interactive shell overlays", hint: "Run Pi, Codex, editors, SSH, and long-running CLIs in observable overlays with hands-free and dispatch modes." },
-	{
-		id: "autoresearch",
-		category: "research",
-		source: "git:github.com/davebcn87/pi-autoresearch",
-		legacySources: ["git:github.com/davebcn87/pi-autoresearch@5a29db080131449edc6d25a6b351b12879063366"],
-		description: "Autonomous experiment loop",
-		hint: "Long-running autonomous research loop.",
-	},
-	{ id: "ralph-wiggum", category: "research", source: "npm:@tmustier/pi-ralph-wiggum", description: "Ralph Wiggum agent loop", hint: "Long-running iterative dev loops with goals, checklists, and optional self-reflection." },
-	{ id: "compound", category: "frameworks", source: "npm:@every-env/compound-plugin", description: "Official Compound Engineering", hint: "Official Every Pi target via Bun (skipped if Bun is unavailable)." },
-	{ id: "hackerman", category: "themes", source: "git:github.com/javierportillo/pi-hackerman@63b0a3ef2c7b14985ffeb6cac44614ba59cd5693", description: "Hackerman theme", hint: "Neon hacker-style color theme ported from the VS Code Hackerman Theme." },
-	{ id: "curated-themes", category: "themes", source: "npm:@victor-software-house/pi-curated-themes", description: "65 curated dark themes", hint: "65 dark terminal themes adapted from iTerm2-Color-Schemes." },
-	{ id: "terminal-theme", category: "themes", source: "npm:pi-terminal-theme", description: "Terminal ANSI theme", hint: "Maps Pi colors to ANSI 0–15 so Pi inherits your terminal's own color palette." },
+	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
+	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
+	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "Second-opinion reviewer", hint: "Escalate to a stronger reviewer model for a plan, correction, or stop signal." },
+	{ id: "workspace-history", category: "core", source: "npm:pi-workspace-history", description: "Workspace history", hint: "Track and revisit workspace session history." },
+	{ id: "goal", category: "core", source: "npm:@narumitw/pi-goal", description: "Goal tracking", hint: "Track goals across Pi sessions." },
+	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "Vision support", hint: "Add image-aware capabilities to Pi." },
+	// ui
+	{ id: "interactive-shell", category: "ui", source: "npm:pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
+	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "Terminal user interface", hint: "Add a richer terminal UI for Pi workflows." },
+	{ id: "tool-display", category: "ui", source: "npm:pi-tool-display", description: "Tool result display", hint: "Customize how Pi tool results are presented.", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
+	// tools
+	{ id: "btw", category: "tools", source: "npm:pi-btw", description: "Side-chat popover", hint: "Ask quick questions without polluting your conversation history." },
+	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "Hashline editing", hint: "Add hash-anchored read and edit output." },
+	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "FFF workflow", hint: "Add the FFF workflow to Pi." },
+	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "Code simplify review", hint: "Reviews recently changed code for clarity and maintainability." },
+	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff review and annotation", hint: "Walk the diff, annotate changes, and send feedback to the agent." },
+	{ id: "agent-browser", category: "tools", source: "npm:pi-agent-browser-native", description: "Browser automation", hint: "Drive real browser sessions to browse, click, and capture screenshots." },
+	{ id: "plan-mode", category: "tools", source: "npm:@narumitw/pi-plan-mode", description: "Read-only plan mode", hint: "Add a Codex-like /plan mode for structured planning before edits." },
+	// themes
+	{ id: "vesper-dark", category: "themes", themeFiles: ["themes/vesper-dark.json"], description: "Vesper dark theme", hint: "Warm peach-and-mint dark theme; set settings.theme to \"vesper-dark\" to activate." },
+	{ id: "vesper-light", category: "themes", themeFiles: ["themes/vesper-light.json"], description: "Vesper light theme", hint: "Light variant of the Vesper theme; set settings.theme to \"vesper-light\" to activate." },
+	// config
+	{ id: "global-agents", category: "config", agentFiles: ["agent/AGENTS.md"], description: "Global AGENTS.md", hint: "Installs the agent personality/config file to ~/.pi/agent/AGENTS.md (backed up before overwrite)." },
 ];
+const CATEGORIES = [...new Set(PACKAGES.map((pkg) => pkg.category))];
 
-const PI_CORE_PACKAGE = "@earendil-works/pi-coding-agent";
-const PI_CORE_LATEST_SPEC = `${PI_CORE_PACKAGE}@latest`;
-const COMPOUND_PKG_ID = "compound";
-const COMPOUND_SOURCE = "npm:@every-env/compound-plugin";
-const COMPOUND_UPSTREAM_PACKAGE = "@every-env/compound-plugin@3.0.0";
-const COMPOUND_PLUGIN_NAME = "compound-engineering";
-const COMPOUND_DEPENDENCY_IDS = ["subagents", "pi-ask-user"];
-const COMPOUND_MANIFEST_RELATIVE_PATH = join("compound-engineering", "install-manifest.json");
-const COMPOUND_LEGACY_STATE_RELATIVE_PATH = join(".lazypi", "compound-engineering.json");
-const PACKAGE_DEPENDENCIES = new Map([[COMPOUND_PKG_ID, COMPOUND_DEPENDENCY_IDS]]);
-const LOAD_FIRST_PACKAGE_IDS = ["extension-settings"];
+// ---------------------------------------------------------------------------
+// Agent files (theme and config file installation)
+// ---------------------------------------------------------------------------
+// Catalog entries can ship files that install into Pi's agent directory:
+// `themeFiles` land under themes/, `agentFiles` land at the agent root.
+// Installing copies each file, backing up any existing file with the same name.
+function themeTargetDir() {
+	return join(agentConfigDir(), "themes");
+}
+function repoFilePath(relativePath) {
+	return join(dirname(fileURLToPath(import.meta.url)), "..", relativePath);
+}
+function entryFileTargets(pkg) {
+	const targets = [];
+	for (const file of pkg.themeFiles ?? []) {
+		targets.push({
+			kind: "theme",
+			name: basename(file),
+			sourcePath: repoFilePath(file),
+			targetPath: join(themeTargetDir(), basename(file)),
+		});
+	}
+	for (const file of pkg.agentFiles ?? []) {
+		targets.push({
+			kind: "agent-file",
+			name: basename(file),
+			sourcePath: repoFilePath(file),
+			targetPath: join(agentConfigDir(), basename(file)),
+		});
+	}
+	return targets;
+}
+function isFileInstall(pkg) {
+	return entryFileTargets(pkg).length > 0;
+}
+function fileInstallLabel(pkg) {
+	return [...(pkg.themeFiles ?? []), ...(pkg.agentFiles ?? [])].join(", ");
+}
+function fileNeedsSync(file) {
+	if (!existsSync(file.sourcePath)) return true;
+	if (!existsSync(file.targetPath)) return true;
+	return readFileSync(file.sourcePath, "utf8") !== readFileSync(file.targetPath, "utf8");
+}
+function fileInstallNeeded(pkg) {
+	return entryFileTargets(pkg).some(fileNeedsSync);
+}
 
 // ---------------------------------------------------------------------------
 // Output helpers
@@ -92,7 +111,13 @@ const yellow = c("33");
 const cyan = c("36");
 const blue = c("94");
 const white = c("1;97");
-
+const PACKAGE_COMMAND = `npx ${(() => {
+	try {
+		return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).name || "lazypi";
+	} catch {
+		return "lazypi";
+	}
+})()}`;
 function printHeader(text) {
 	console.log(`\n${bold(text)}`);
 }
@@ -199,9 +224,9 @@ function expandPackageDependencies(selectedIds) {
 	let changed = true;
 	while (changed) {
 		changed = false;
-		for (const [pkgId, dependencyIds] of PACKAGE_DEPENDENCIES.entries()) {
-			if (!expanded.has(pkgId)) continue;
-			for (const dependencyId of dependencyIds) {
+		for (const pkg of PACKAGES) {
+			if (!expanded.has(pkg.id) || !Array.isArray(pkg.dependencies)) continue;
+			for (const dependencyId of pkg.dependencies) {
 				if (expanded.has(dependencyId)) continue;
 				expanded.add(dependencyId);
 				changed = true;
@@ -215,45 +240,42 @@ function expandPackageDependencies(selectedIds) {
 // Help
 // ---------------------------------------------------------------------------
 function printHelp() {
-	console.log(`${bold("lazypi")} — opinionated installer for Pi extensions
+	console.log(`${bold("lazypi")} — personal Pi extension manager
 
 ${bold("Usage:")}
-  npx @robzolkos/lazypi [command] [options]
+  ${PACKAGE_COMMAND} [command] [options]
 
 ${bold("Commands:")}
-  install   Install the selected LazyPi catalog (default)
-  remove    Remove a catalog package by id (or pass a raw pi source)
-  status    Show which catalog packages are installed
-  update    Run \`pi update\` for installed Pi packages
-  doctor    Check your environment for common problems
+  install   Install the selected extension catalog (default)
+  remove    Remove a catalog extension by id or raw Pi source
+  status    Show installed, missing, and extra Pi extensions
+  update    Run the overall Pi extension update
+  doctor    Check the Pi extension environment
 
 ${bold("Install options:")}
-  --only <list>       Install only the given categories or package ids
+  --only <list>       Install only the given categories or extension ids
   --except <list>     Install everything except the given categories or ids
   -l, --local         Install into the current project (.pi/settings.json)
-  -y, --yes           Skip the picker and any confirmation prompt
+  -y, --yes           Skip the picker and confirmation prompt
   -h, --help          Show this help
 
 ${bold("Default behaviour:")}
-  - Every catalog package is installed (lazy on purpose).
-  - On a TTY, an interactive picker appears with everything pre-ticked;
-    untick categories or packages before confirming.
+  - Every catalog extension is installed by default.
+  - On a TTY, an interactive picker starts with everything selected.
   - With --yes, --only, or --except the picker is skipped.
+  - update does not filter one extension; use pi update <source> for that.
 
 ${bold("Categories:")}
-  core         foundations: sub-agents, MCP, web access, memory, model providers, …
-  ui           powerbar, interactive shell overlays, usage dashboard, …
-  research     autonomous research / experiment loops
-  frameworks   structured engineering workflows
+${CATEGORIES.map((category) => `  ${category}`).join("\n")}
 
 ${bold("Examples:")}
-  npx @robzolkos/lazypi                              # everything (interactive picker on a TTY)
-  npx @robzolkos/lazypi --yes                        # everything, no prompt
-  npx @robzolkos/lazypi --only core                  # just the core category
-  npx @robzolkos/lazypi --only subagents,mcp         # individual package ids also work
-  npx @robzolkos/lazypi --only core --local          # core into the current project
-  npx @robzolkos/lazypi status
-  npx @robzolkos/lazypi doctor`);
+  ${PACKAGE_COMMAND}                              # everything
+  ${PACKAGE_COMMAND} --yes                        # everything, no prompt
+  ${PACKAGE_COMMAND} --only core                  # core extensions
+  ${PACKAGE_COMMAND} --only subagents,mcp         # selected extensions
+  ${PACKAGE_COMMAND} --only core --local          # project-local install
+  ${PACKAGE_COMMAND} status
+  ${PACKAGE_COMMAND} doctor`);
 }
 
 // ---------------------------------------------------------------------------
@@ -296,9 +318,6 @@ function settingsPath(local) {
 	return local ? join(cwd(), ".pi", "settings.json") : join(agentConfigDir(), "settings.json");
 }
 
-// Builtin pi-subagents agents that hardcode a specific model — blank them out
-// so they fall back to the user's active session model instead.
-const SUBAGENT_BUILTIN_MODELS = ["context-builder", "planner", "researcher", "reviewer", "scout", "worker"];
 
 
 function readSettings(local) {
@@ -310,7 +329,6 @@ function readSettings(local) {
 		return { path, exists: true, parsed: null, error: err instanceof Error ? err.message : String(err) };
 	}
 }
-
 function backupPath(path) {
 	const timestamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 	return `${path}.lazypi.${timestamp}.bak`;
@@ -331,15 +349,140 @@ function writeSettings(local, mutate) {
 	writeFileSync(current.path, JSON.stringify(settings, null, 2) + "\n", "utf8");
 	return { ok: true, path: current.path, backup, changed: true };
 }
-
-function writeSubagentOverrides(local) {
-	return writeSettings(local, (settings) => {
-		const overrides = {};
-		for (const name of SUBAGENT_BUILTIN_MODELS) overrides[name] = { model: "" };
-		settings.subagents = { ...(settings.subagents ?? {}), agentOverrides: { ...(settings.subagents?.agentOverrides ?? {}), ...overrides } };
-		return true;
-	});
+function installRoot(local) {
+	return local ? join(cwd(), ".pi") : agentConfigDir();
 }
+
+function isJsonObject(value) {
+	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readJsonObjectFile(path) {
+	if (!existsSync(path)) return { exists: false, value: {} };
+	try {
+		const value = JSON.parse(readFileSync(path, "utf8"));
+		if (!isJsonObject(value)) return { exists: true, error: "the JSON root must be an object" };
+		return { exists: true, value };
+	} catch (err) {
+		return { exists: true, error: err instanceof Error ? err.message : String(err) };
+	}
+}
+
+function mergeJsonObjects(target, source) {
+	let changed = false;
+	for (const [key, sourceValue] of Object.entries(source)) {
+		const targetValue = target[key];
+		if (isJsonObject(sourceValue)) {
+			if (!isJsonObject(targetValue)) {
+				target[key] = {};
+				changed = true;
+			}
+			if (mergeJsonObjects(target[key], sourceValue)) changed = true;
+		} else if (!Object.is(targetValue, sourceValue)) {
+			target[key] = sourceValue;
+			changed = true;
+		}
+	}
+	return changed;
+}
+
+function applyJsonMergePostInstall(local, ownerId, rule) {
+	const jsonMerge = rule?.jsonMerge;
+	if (!isJsonObject(jsonMerge) || typeof jsonMerge.path !== "string" || !isJsonObject(jsonMerge.value)) {
+		return { ok: false, error: `invalid postInstall jsonMerge metadata for ${ownerId}` };
+	}
+	const path = join(installRoot(local), jsonMerge.path);
+	const current = readJsonObjectFile(path);
+	if (current.error) return { ok: false, path, error: current.error };
+	const changed = mergeJsonObjects(current.value, jsonMerge.value);
+	if (!changed) return { ok: true, path, changed: false, backup: null };
+	try {
+		mkdirSync(dirname(path), { recursive: true });
+		let backup = null;
+		if (current.exists) {
+			backup = backupPath(path);
+			copyFileSync(path, backup);
+		}
+		writeFileSync(path, JSON.stringify(current.value, null, 2) + "\n", "utf8");
+		return { ok: true, path, changed: true, backup };
+	} catch (err) {
+		return { ok: false, path, error: err instanceof Error ? err.message : String(err) };
+	}
+}
+
+function runSelectedPostInstalls(selected, local, failedIds = new Set()) {
+	const selectedIds = new Set(selected.map((pkg) => pkg.id));
+	const results = [];
+	for (const pkg of selected) {
+		for (const rule of pkg.postInstall ?? []) {
+			const required = Array.isArray(rule.requiresSelected) ? rule.requiresSelected : [];
+			if (!required.every((id) => selectedIds.has(id))) continue;
+			const involvedIds = [pkg.id, ...required];
+			if (involvedIds.some((id) => failedIds.has(id))) continue;
+			const result = applyJsonMergePostInstall(local, pkg.id, rule);
+			const entry = { ownerId: pkg.id, ...result };
+			results.push(entry);
+			if (!result.ok) return { ok: false, results, failure: entry };
+		}
+	}
+	return { ok: true, results };
+}
+
+function reportPostInstallResults(result, interactive) {
+	if (!result.ok) {
+		const message = `Post-install configuration failed after extension installation for ${result.failure.ownerId}${result.failure.path ? ` at ${result.failure.path}` : ""}: ${result.failure.error}`;
+		if (interactive) log.error(message);
+		else console.error(red(message));
+		return false;
+	}
+	for (const entry of result.results) {
+		if (!entry.changed) continue;
+		const backup = entry.backup ? ` Backup: ${entry.backup}` : "";
+		const message = `Applied post-install configuration for ${entry.ownerId}.${backup}`;
+		if (interactive) log.success(message);
+		else console.log(green(message));
+	}
+	return true;
+}
+
+function installAgentFiles(pkg) {
+	const installed = [];
+	const missingSource = [];
+	for (const file of entryFileTargets(pkg)) {
+		if (!existsSync(file.sourcePath)) {
+			missingSource.push(file.name);
+			continue;
+		}
+		if (!fileNeedsSync(file)) continue;
+		mkdirSync(dirname(file.targetPath), { recursive: true });
+		let backup = null;
+		if (existsSync(file.targetPath)) {
+			backup = backupPath(file.targetPath);
+			copyFileSync(file.targetPath, backup);
+		}
+		copyFileSync(file.sourcePath, file.targetPath);
+		installed.push({ kind: file.kind, name: file.name, backup });
+	}
+	return { ok: missingSource.length === 0, installed, missingSource };
+}
+
+function reportAgentFileInstall(result, interactive) {
+	for (const entry of result.installed) {
+		const backup = entry.backup ? ` Backup: ${entry.backup}` : "";
+		const kindLabel = entry.kind === "theme" ? "theme" : "agent file";
+		const message = `Installed ${kindLabel} ${entry.name}.${backup}`;
+		if (interactive) log.success(message);
+		else console.log(green(message));
+	}
+	if (result.missingSource.length > 0) {
+		const message = `Source file(s) missing from this repo: ${result.missingSource.join(", ")}`;
+		if (interactive) log.error(message);
+		else console.error(red(message));
+	}
+}
+
+
+
 
 function packageEntrySource(entry) {
 	if (typeof entry === "string") return entry;
@@ -358,31 +501,51 @@ function readInstalledSources(local) {
 	}
 	return { sources, path: current.path, exists: true };
 }
-
-function loadFirstPackageSources() {
-	return LOAD_FIRST_PACKAGE_IDS
-		.map((id) => PACKAGES.find((pkg) => pkg.id === id)?.source)
-		.filter(Boolean);
+function normalizedPackageEntries(settings, catalog = PACKAGES) {
+	if (!Array.isArray(settings?.packages)) return { ordered: null, constrained: false, cycle: false };
+	const entries = settings.packages;
+	const sources = entries.map(packageEntrySource);
+	const indexes = new Map();
+	for (const [index, source] of sources.entries()) if (source && !indexes.has(source)) indexes.set(source, index);
+	const prerequisites = entries.map(() => new Set());
+	let constrained = false;
+	for (const pkg of catalog) {
+		if (!Array.isArray(pkg.loadBefore)) continue;
+		const from = indexes.get(pkg.source);
+		if (from == null) continue;
+		for (const targetRef of pkg.loadBefore) {
+			const target = catalog.find((candidate) => candidate.id === targetRef || candidate.source === targetRef);
+			const to = target ? indexes.get(target.source) : undefined;
+			if (to == null || from === to || prerequisites[to].has(from)) continue;
+			prerequisites[to].add(from);
+			constrained = true;
+		}
+	}
+	if (!constrained) return { ordered: entries, constrained: false, cycle: false };
+	const state = entries.map(() => 0);
+	const order = [];
+	let cycle = false;
+	const visit = (index) => {
+		if (state[index] === 2 || cycle) return;
+		if (state[index] === 1) {
+			cycle = true;
+			return;
+		}
+		state[index] = 1;
+		for (const prerequisite of prerequisites[index]) visit(prerequisite);
+		state[index] = 2;
+		order.push(index);
+	};
+	for (let index = 0; index < entries.length; index++) visit(index);
+	if (cycle) return { ordered: entries, constrained, cycle: true };
+	return { ordered: order.map((index) => entries[index]), constrained, cycle: false };
 }
 
-export function normalizePackageLoadOrderInSettings(settings) {
-	if (!Array.isArray(settings.packages)) return false;
-	const loadFirstSources = loadFirstPackageSources();
-	const priorityEntries = [];
-	const remainingEntries = [];
-
-	for (const [originalIndex, entry] of settings.packages.entries()) {
-		const source = packageEntrySource(entry);
-		const priorityIndex = source ? loadFirstSources.indexOf(source) : -1;
-		if (priorityIndex === -1) remainingEntries.push(entry);
-		else priorityEntries.push({ entry, priorityIndex, originalIndex });
-	}
-
-	if (priorityEntries.length === 0) return false;
-	priorityEntries.sort((a, b) => a.priorityIndex - b.priorityIndex || a.originalIndex - b.originalIndex);
-	const ordered = [...priorityEntries.map(({ entry }) => entry), ...remainingEntries];
-	const changed = ordered.some((entry, index) => entry !== settings.packages[index]);
-	if (changed) settings.packages = ordered;
+export function normalizePackageLoadOrderInSettings(settings, catalog = PACKAGES) {
+	const result = normalizedPackageEntries(settings, catalog);
+	if (!result.constrained || result.cycle) return false;
+	const changed = result.ordered.some((entry, index) => entry !== settings.packages[index]);
+	if (changed) settings.packages = result.ordered;
 	return changed;
 }
 
@@ -390,15 +553,14 @@ function normalizePackageLoadOrder(local) {
 	return writeSettings(local, normalizePackageLoadOrderInSettings);
 }
 
-function packageLoadOrderStatusFromSettings(settings) {
-	if (!Array.isArray(settings?.packages)) return { checked: false };
-	const sources = settings.packages.map(packageEntrySource);
-	const extensionSettings = PACKAGES.find((pkg) => pkg.id === "extension-settings")?.source;
-	const powerbar = PACKAGES.find((pkg) => pkg.id === "powerbar")?.source;
-	const extensionSettingsIndex = sources.indexOf(extensionSettings);
-	const powerbarIndex = sources.indexOf(powerbar);
-	if (extensionSettingsIndex === -1 || powerbarIndex === -1) return { checked: false };
-	return { checked: true, ok: extensionSettingsIndex < powerbarIndex, extensionSettingsIndex, powerbarIndex };
+function packageLoadOrderStatusFromSettings(settings, catalog = PACKAGES) {
+	const result = normalizedPackageEntries(settings, catalog);
+	if (!result.constrained) return { checked: false };
+	return {
+		checked: true,
+		ok: !result.cycle && result.ordered.every((entry, index) => entry === settings.packages[index]),
+		cycle: result.cycle,
+	};
 }
 
 function packageLoadOrderStatus(local) {
@@ -417,359 +579,38 @@ function reportLoadOrderNormalization(result, interactive) {
 	}
 	if (!result.changed) return;
 	const backup = result.backup ? ` Backup: ${result.backup}` : "";
-	const message = `Updated package load order in ${result.path}: extension-settings loads first.${backup}`;
+	const message = `Updated package load order from catalog metadata.${backup}`;
 	if (interactive) log.success(message);
 	else console.log(green(message));
 }
 
-function compoundInstallRoot(local) {
-	return local ? join(cwd(), ".pi") : agentConfigDir();
-}
 
-function readJsonFileWithMetadata(path) {
-	if (!existsSync(path)) return { path, exists: false, parsed: null, error: null };
-	try {
-		return { path, exists: true, parsed: JSON.parse(readFileSync(path, "utf8")), error: null };
-	} catch (err) {
-		return { path, exists: true, parsed: null, error: err instanceof Error ? err.message : String(err) };
+function packageInstallStatus(pkg, installedPiSources) {
+	if (isFileInstall(pkg)) {
+		const installed = entryFileTargets(pkg).every((file) => existsSync(file.targetPath));
+		return { installed, present: installed };
 	}
+	const installed = installedPiSources.has(pkg.source);
+	return { installed, present: installed };
 }
 
-function compoundManifestPath(local) {
-	return join(compoundInstallRoot(local), COMPOUND_MANIFEST_RELATIVE_PATH);
+function isPackageInstalled(pkg, installedPiSources) {
+	return packageInstallStatus(pkg, installedPiSources).installed;
 }
 
-function readCompoundManifest(local) {
-	return readJsonFileWithMetadata(compoundManifestPath(local));
+function isPackagePresent(pkg, installedPiSources) {
+	return packageInstallStatus(pkg, installedPiSources).present;
 }
 
-function compoundLegacyStatePath(local) {
-	return join(compoundInstallRoot(local), COMPOUND_LEGACY_STATE_RELATIVE_PATH);
-}
 
-function readCompoundLegacyState(local) {
-	return readJsonFileWithMetadata(compoundLegacyStatePath(local));
-}
 
-function clearCompoundLegacyState(local) {
-	const path = compoundLegacyStatePath(local);
-	if (existsSync(path)) rmSync(path, { force: true });
-	const parent = dirname(path);
-	if (existsSync(parent) && readdirSync(parent).length === 0) rmSync(parent, { recursive: true, force: true });
-}
-
-function compoundInstallState(local) {
-	const manifest = readCompoundManifest(local);
-	const legacy = readCompoundLegacyState(local);
-	if (manifest.exists) {
-		if (manifest.error) return { mode: "invalid-manifest", manifest, legacy };
-		if (manifest.parsed) return { mode: "manifest", manifest, legacy };
-	}
-	if (legacy.exists) {
-		if (legacy.error) return { mode: "invalid-legacy", manifest, legacy };
-		if (legacy.parsed) return { mode: "legacy", manifest, legacy };
-	}
-	return { mode: "none", manifest, legacy };
-}
-
-function isCompoundInstalled(local) {
-	const { mode } = compoundInstallState(local);
-	return mode === "manifest" || mode === "legacy";
-}
-
-function compoundNeedsMigration(local) {
-	return compoundInstallState(local).mode === "legacy";
-}
-
-function normalizeRelativePath(path) {
-	return path.split("\\").join("/").replace(/^\.\//, "");
-}
-
-function pruneEmptyDirs(path) {
-	if (!existsSync(path) || !statSync(path).isDirectory()) return;
-	for (const entry of readdirSync(path)) pruneEmptyDirs(join(path, entry));
-	if (readdirSync(path).length === 0) rmSync(path, { recursive: true, force: true });
-}
-
-function removeEmptyManagedDirs(local) {
-	const root = compoundInstallRoot(local);
-	for (const dir of ["prompts", "skills", "extensions", "agents", "compound-engineering", ".lazypi"]) {
-		pruneEmptyDirs(join(root, dir));
-	}
-}
-
-function coerceCompoundManagedPath(entry) {
-	if (typeof entry === "string") return normalizeRelativePath(entry);
-	if (!entry || typeof entry !== "object") return null;
-	for (const key of ["path", "relativePath", "file"]) {
-		if (typeof entry[key] === "string") return normalizeRelativePath(entry[key]);
-	}
-	return null;
-}
-
-function compoundManifestManagedPaths(manifest) {
-	const seen = new Set(["AGENTS.md"]);
-	const add = (entry, baseDir = null) => {
-		const path = coerceCompoundManagedPath(entry);
-		if (path) {
-			seen.add(baseDir != null && !path.includes("/") ? normalizeRelativePath(join(baseDir, path)) : path);
-			return;
-		}
-		if (typeof entry === "string" && baseDir != null) seen.add(normalizeRelativePath(join(baseDir, entry)));
-	};
-	for (const source of [manifest, manifest?.installManifest]) {
-		if (!source || typeof source !== "object") continue;
-		for (const key of ["files", "managedFiles", "paths", "createdFiles", "artifacts"]) {
-			if (!Array.isArray(source[key])) continue;
-			for (const entry of source[key]) add(entry);
-		}
-		for (const entry of source.skills ?? []) add(entry, "skills");
-		for (const entry of source.prompts ?? []) add(entry, "prompts");
-		for (const entry of source.extensions ?? []) add(entry, "extensions");
-		for (const entry of source.agents ?? []) add(entry, "agents");
-	}
-	return [...seen].sort((a, b) => b.length - a.length);
-}
-
-function legacyCompoundCreatedPaths(state) {
-	return [...new Set((state?.createdFiles ?? []).map((path) => normalizeRelativePath(path)).filter(Boolean))].sort((a, b) => b.length - a.length);
-}
-
-function removeManagedPaths(root, relativePaths) {
-	for (const relativePath of [...new Set(relativePaths.filter(Boolean))].sort((a, b) => b.length - a.length)) {
-		rmSync(join(root, relativePath), { recursive: true, force: true });
-	}
-}
-
-function restoreLegacyCompoundModifiedFiles(root, state) {
-	for (const entry of state?.modifiedFiles ?? []) {
-		if (!entry || typeof entry.path !== "string" || typeof entry.previousContentBase64 !== "string") continue;
-		const target = join(root, normalizeRelativePath(entry.path));
-		mkdirSync(dirname(target), { recursive: true });
-		writeFileSync(target, Buffer.from(entry.previousContentBase64, "base64"));
-	}
-}
-
-function runCompoundPlugin(command, local) {
-	const targetRoot = resolve(compoundInstallRoot(local));
-	mkdirSync(targetRoot, { recursive: true });
-	const args = command === "cleanup"
-		? [COMPOUND_UPSTREAM_PACKAGE, "cleanup", "--target", "pi", "--pi-home", targetRoot]
-		: [COMPOUND_UPSTREAM_PACKAGE, "install", COMPOUND_PLUGIN_NAME, "--to", "pi", "--pi-home", targetRoot];
-	return spawnCommand("bunx", args, { stdio: "inherit" }).status ?? 1;
-}
-
-function installCompound(local, interactive = false) {
-	if (!hasCmd("bun")) {
-		const reason = "bun is not on PATH — official Compound Engineering from Every will be skipped.";
-		if (interactive) log.warn(reason);
-		else console.log(`${yellow("  !")} ${reason}`);
-		return { status: "skipped", reason };
-	}
-
-	const cleanupStatus = runCompoundPlugin("cleanup", local);
-	if (cleanupStatus !== 0) return { status: "failed", code: cleanupStatus, reason: "upstream cleanup failed" };
-
-	const installStatus = runCompoundPlugin("install", local);
-	if (installStatus !== 0) return { status: "failed", code: installStatus, reason: "upstream install failed" };
-
-	const manifest = readCompoundManifest(local);
-	if (manifest.error) return { status: "failed", code: 1, reason: `manifest is invalid (${manifest.error})` };
-	if (!manifest.exists || !manifest.parsed) return { status: "failed", code: 1, reason: `missing ${COMPOUND_MANIFEST_RELATIVE_PATH}` };
-
-	clearCompoundLegacyState(local);
-	removeEmptyManagedDirs(local);
-	return { status: "installed" };
-}
-
-function removeCompound(local) {
-	const installState = compoundInstallState(local);
-	const root = resolve(compoundInstallRoot(local));
-
-	if (installState.mode === "invalid-manifest") {
-		console.error(red(`Compound Engineering manifest is invalid: ${installState.manifest.error}`));
-		return 1;
-	}
-	if (installState.mode === "invalid-legacy") {
-		console.error(red(`Compound Engineering legacy state is invalid: ${installState.legacy.error}`));
-		return 1;
-	}
-	if (installState.mode === "none") return 0;
-
-	if (installState.mode === "manifest") {
-		const managedPaths = compoundManifestManagedPaths(installState.manifest.parsed);
-		if (managedPaths.length === 0) {
-			console.error(red(`Compound Engineering manifest does not list managed paths: ${installState.manifest.path}`));
-			return 1;
-		}
-		removeManagedPaths(root, [...managedPaths, COMPOUND_MANIFEST_RELATIVE_PATH, join("compound-engineering", "legacy-backup")]);
-	}
-
-	if (installState.mode === "legacy") {
-		removeManagedPaths(root, legacyCompoundCreatedPaths(installState.legacy.parsed));
-		restoreLegacyCompoundModifiedFiles(root, installState.legacy.parsed);
-		removeManagedPaths(root, [join("compound-engineering", "legacy-backup")]);
-	}
-
-	clearCompoundLegacyState(local);
-	removeEmptyManagedDirs(local);
-	return 0;
-}
 
 function runPi(args) {
 	const result = spawnCommand("pi", args, { stdio: "inherit" });
 	return result.status ?? 1;
 }
 
-function commandPath(name) {
-	const command = platform() === "win32" ? "where" : "which";
-	const probe = spawnCommand(command, [name], { encoding: "utf8" });
-	if (probe.status !== 0) return null;
-	const first = String(probe.stdout ?? "").split(/\r?\n/).map((line) => line.trim()).find(Boolean);
-	return first || null;
-}
 
-function findPackageRoot(startPath, packageName = PI_CORE_PACKAGE) {
-	let current = startPath;
-	try {
-		if (existsSync(current) && !statSync(current).isDirectory()) current = dirname(current);
-	} catch {
-		current = dirname(current);
-	}
-
-	while (current && dirname(current) !== current) {
-		const packageJsonPath = join(current, "package.json");
-		if (existsSync(packageJsonPath)) {
-			try {
-				const pkg = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-				if (pkg?.name === packageName) return current;
-			} catch {
-				// Keep walking; a malformed package.json should not break update fallback.
-			}
-		}
-		current = dirname(current);
-	}
-	return null;
-}
-
-export function inferNpmPrefixFromPiPackageRoot(packageRoot, packageName = PI_CORE_PACKAGE) {
-	const normalizedRoot = resolve(packageRoot).split("\\").join("/");
-	if (normalizedRoot.includes("/.pnpm/")) return null;
-	const suffixes = [
-		`/lib/node_modules/${packageName}`,
-		`/node_modules/${packageName}`,
-	];
-	for (const suffix of suffixes) {
-		if (normalizedRoot.endsWith(suffix)) {
-			return normalizedRoot.slice(0, -suffix.length) || null;
-		}
-	}
-	return null;
-}
-
-function isNamedPackageRoot(path, packageName = PI_CORE_PACKAGE) {
-	const packageJsonPath = join(path, "package.json");
-	if (!existsSync(packageJsonPath)) return false;
-	try {
-		const pkg = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-		return pkg?.name === packageName;
-	} catch {
-		return false;
-	}
-}
-
-function isPiShimInNpmPrefix(piPath, prefix) {
-	const shimDir = resolve(dirname(piPath)).split("\\").join("/");
-	const normalizedPrefix = resolve(prefix).split("\\").join("/");
-	return shimDir === `${normalizedPrefix}/bin` || shimDir === normalizedPrefix;
-}
-
-function inferNpmPrefixFromPiShim(piPath) {
-	const shimDir = dirname(piPath);
-	const candidates = basename(shimDir) === "bin"
-		? [dirname(shimDir)]
-		: [shimDir];
-	for (const prefix of candidates) {
-		for (const packageRoot of [
-			join(prefix, "lib", "node_modules", PI_CORE_PACKAGE),
-			join(prefix, "node_modules", PI_CORE_PACKAGE),
-		]) {
-			if (isNamedPackageRoot(packageRoot)) return prefix;
-		}
-	}
-	return null;
-}
-
-function getActivePiNpmPrefix() {
-	const piPath = commandPath("pi");
-	if (!piPath) return null;
-	let resolvedPiPath = piPath;
-	try {
-		resolvedPiPath = realpathSync(piPath);
-	} catch {
-		// Fall back to the PATH result; findPackageRoot can still walk real files.
-	}
-	const packageRoot = findPackageRoot(resolvedPiPath);
-	const packagePrefix = packageRoot ? inferNpmPrefixFromPiPackageRoot(packageRoot) : null;
-	if (packagePrefix && isPiShimInNpmPrefix(piPath, packagePrefix)) return packagePrefix;
-	return inferNpmPrefixFromPiShim(piPath);
-}
-
-function updatePiCoreViaNpmLatest() {
-	const prefix = getActivePiNpmPrefix();
-	if (!prefix) {
-		console.log(`${yellow("  !")} Could not determine the npm prefix for the active pi command; falling back to \`pi update\`.`);
-		return null;
-	}
-
-	console.log(`\n→ npm --prefix ${prefix} install -g ${PI_CORE_LATEST_SPEC}`);
-	const status = spawnCommand("npm", ["--prefix", prefix, "install", "-g", PI_CORE_LATEST_SPEC], { stdio: "inherit" }).status ?? 1;
-	return status;
-}
-
-function updatePiCoreAndExtensions() {
-	const coreStatus = updatePiCoreViaNpmLatest();
-	if (coreStatus == null) return runPi(["update"]);
-	if (coreStatus !== 0) return coreStatus;
-	return runPi(["update", "--extensions"]);
-}
-
-function legacySourcesForPackage(pkg) {
-	return Array.isArray(pkg.legacySources) ? pkg.legacySources : [];
-}
-
-function isLegacySourceForPackage(pkg, source) {
-	return legacySourcesForPackage(pkg).includes(source);
-}
-
-function findLegacyInstalledSources(pkg, installedPiSources) {
-	return [...installedPiSources].filter((source) => isLegacySourceForPackage(pkg, source));
-}
-
-function packageInstallStatus(pkg, installedPiSources, local) {
-	if (pkg.id === COMPOUND_PKG_ID) {
-		const { mode } = compoundInstallState(local);
-		return {
-			installed: mode === "manifest",
-			legacy: mode === "legacy",
-			present: mode === "manifest" || mode === "legacy",
-		};
-	}
-	const legacySources = findLegacyInstalledSources(pkg, installedPiSources);
-	return {
-		installed: installedPiSources.has(pkg.source),
-		legacy: legacySources.length > 0,
-		present: installedPiSources.has(pkg.source) || legacySources.length > 0,
-	};
-}
-
-function isPackageInstalled(pkg, installedPiSources, local) {
-	return packageInstallStatus(pkg, installedPiSources, local).installed;
-}
-
-function isPackagePresent(pkg, installedPiSources, local) {
-	return packageInstallStatus(pkg, installedPiSources, local).present;
-}
 
 // ---------------------------------------------------------------------------
 // Pi / settings plumbing (shared helpers)
@@ -787,7 +628,7 @@ function readJsonSafe(path) {
 // Auth detection (read-only)
 // ---------------------------------------------------------------------------
 // Pi reads credentials from auth.json in its agent config directory and also
-// honors provider env vars. LazyPi reports the available credentials so users
+// honors provider env vars. LazyPi reports available credentials so users
 // know whether to run `pi /login` first.
 const AUTH_ENV_VARS = [
 	["ANTHROPIC_API_KEY", "anthropic"],
@@ -892,7 +733,7 @@ async function ensurePi(flags) {
 	log.warn("Could not find the `pi` command on PATH.");
 	const ok = flags.yes || (await confirm("Install Pi now with `npm install -g @earendil-works/pi-coding-agent`?", true));
 	if (!ok) {
-		log.error("Install Pi first, then re-run `npx @robzolkos/lazypi`.");
+		log.error(`Install Pi first, then re-run ${PACKAGE_COMMAND}.`);
 		return false;
 	}
 
@@ -904,7 +745,7 @@ async function ensurePi(flags) {
 	}
 
 	if (!hasCmd("pi")) {
-		log.error("Installed Pi, but `pi` is still not on PATH. Open a new shell and re-run `npx @robzolkos/lazypi`.");
+		log.error(`Installed Pi, but \`pi\` is still not on PATH. Open a new shell and re-run ${PACKAGE_COMMAND}.`);
 		return false;
 	}
 	return true;
@@ -927,9 +768,7 @@ async function cmdInstall(flags) {
 
 	if (interactive) {
 		const choice = await askLazyOrPick(PACKAGES.length);
-		if (choice === "pick") {
-			selectedIds = expandPackageDependencies(await runPicker(selectedIds));
-		}
+		if (choice === "pick") selectedIds = expandPackageDependencies(await runPicker(selectedIds));
 	}
 
 	const selected = PACKAGES.filter((p) => selectedIds.has(p.id));
@@ -939,103 +778,51 @@ async function cmdInstall(flags) {
 		return 0;
 	}
 
+	reportLoadOrderNormalization(normalizePackageLoadOrder(flags.local), interactive);
 	const { sources: installedSources, error: settingsError } = readInstalledSources(flags.local);
 	if (settingsError) log.warn(`Could not parse ${settingsPath(flags.local)} — ${settingsError}`);
 
-	const forceIds = new Set(Array.isArray(flags.forceIds) ? flags.forceIds : []);
-	const toInstall = selected.filter((pkg) => {
-		if (forceIds.has(pkg.id)) return true;
-		if (pkg.id === COMPOUND_PKG_ID) return !isCompoundInstalled(flags.local) || compoundNeedsMigration(flags.local);
-		return !isPackageInstalled(pkg, installedSources, flags.local);
-	});
-	const alreadyInstalled = selected.filter((pkg) => {
-		if (forceIds.has(pkg.id)) return false;
-		if (pkg.id === COMPOUND_PKG_ID) return isCompoundInstalled(flags.local) && !compoundNeedsMigration(flags.local);
-		return isPackageInstalled(pkg, installedSources, flags.local);
-	});
-	const legacyInstalled = selected.filter((pkg) => {
-		if (forceIds.has(pkg.id)) return false;
-		if (pkg.id === COMPOUND_PKG_ID) return compoundNeedsMigration(flags.local);
-		return !isPackageInstalled(pkg, installedSources, flags.local) && isPackagePresent(pkg, installedSources, flags.local);
-	});
-	const installLabel = legacyInstalled.length > 0 ? `${toInstall.length} (${legacyInstalled.length} migration${legacyInstalled.length === 1 ? "" : "s"})` : String(toInstall.length);
+	const toInstall = selected.filter((pkg) => (isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
+	const alreadyInstalled = selected.filter((pkg) => !(isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
 	const scope = flags.local ? "project (.pi/settings.json)" : `global (${settingsPath(false)})`;
-
-	const preInstallAuth = detectAuth();
 	const summary = [
 		`Target:            ${scope}`,
 		`Selected:          ${selected.length}/${PACKAGES.length}`,
 		`Already installed: ${alreadyInstalled.length}`,
-		`Will install:      ${installLabel}`,
-		`Pi credentials:    ${formatAuthSummary(preInstallAuth)}`,
+		`Will install:      ${toInstall.length}`,
+		`Pi credentials:    ${formatAuthSummary(detectAuth())}`,
 	].join("\n");
 	if (interactive) note(summary, "Plan");
 	else console.log(summary);
 
-	if (selected.some((p) => p.id === "subagents")) {
-		const overrideResult = writeSubagentOverrides(flags.local);
-		if (!overrideResult.ok) {
-			const message = `Refusing to update ${overrideResult.path} because it is not valid JSON (${overrideResult.error}). Fix the file first, then rerun lazypi.`;
-			if (interactive) {
-				log.error(message);
-				outro(red("Aborted."));
-			} else {
-				console.error(red(message));
-			}
-			return 2;
-		}
-	}
-
-	const preInstallLoadOrder = normalizePackageLoadOrder(flags.local);
-	reportLoadOrderNormalization(preInstallLoadOrder, interactive);
-
 	if (toInstall.length === 0) {
+		const postInstall = runSelectedPostInstalls(selected, flags.local);
+		if (!reportPostInstallResults(postInstall, interactive)) return 1;
 		printCheatsheet(selected, interactive);
 		const done = "Nothing to do — every selected package is already installed.";
 		if (interactive) log.success(green(done));
 		else console.log(green(done));
-		const authState = detectAuth();
-		printNextSteps(authState, 0, interactive);
+		printNextSteps(detectAuth(), 0, interactive);
 		return 0;
 	}
 
 	const piArgs = flags.local ? ["install", "-l"] : ["install"];
 	const failed = [];
-	const skipped = [];
-
 	for (const pkg of toInstall) {
-		if (pkg.id === COMPOUND_PKG_ID) {
-			const action = `bunx ${COMPOUND_UPSTREAM_PACKAGE} cleanup --target pi && bunx ${COMPOUND_UPSTREAM_PACKAGE} install ${COMPOUND_PLUGIN_NAME} --to pi`;
+		if (isFileInstall(pkg)) {
+			const action = pkg.category === "themes" ? `install theme ${pkg.id}` : `install agent file ${pkg.id}`;
 			if (interactive) log.step(action);
 			else console.log(`\n→ ${action}`);
-			const result = installCompound(flags.local, interactive);
-			if (result.status === "failed") {
+			const themeResult = installAgentFiles(pkg);
+			if (!themeResult.ok) {
 				failed.push(pkg);
-				const detail = result.reason ? ` (${result.reason})` : "";
-				if (interactive) log.error(`failed to install ${pkg.id}${detail}`);
-				else console.error(red(`  ✗ failed to install ${pkg.id}${detail}`));
-			} else if (result.status === "skipped") {
-				skipped.push(pkg);
+				if (interactive) log.error(`failed to install ${pkg.id}`);
+				else console.error(red(`  ✗ failed to install ${pkg.id}`));
+			} else {
+				reportAgentFileInstall(themeResult, interactive);
 			}
 			continue;
 		}
-
-		const legacySources = findLegacyInstalledSources(pkg, installedSources);
-		let migrationStatus = 0;
-		for (const legacySource of legacySources) {
-			const removeAction = `pi remove ${legacySource}`;
-			if (interactive) log.step(removeAction);
-			else console.log(`\n→ ${removeAction}`);
-			migrationStatus = spawnCommand("pi", flags.local ? ["remove", "-l", legacySource] : ["remove", legacySource], { stdio: "inherit" }).status ?? 1;
-			if (migrationStatus !== 0) break;
-		}
-		if (migrationStatus !== 0) {
-			failed.push(pkg);
-			if (interactive) log.error(`failed to migrate ${pkg.id}`);
-			else console.error(red(`  ✗ failed to migrate ${pkg.id}`));
-			continue;
-		}
-
 		const action = `pi install ${pkg.source}`;
 		if (interactive) log.step(action);
 		else console.log(`\n→ ${action}`);
@@ -1050,26 +837,19 @@ async function cmdInstall(flags) {
 		}
 	}
 
-	const postInstallLoadOrder = normalizePackageLoadOrder(flags.local);
-	reportLoadOrderNormalization(postInstallLoadOrder, interactive);
-
-	const installedCount = toInstall.length - failed.length - skipped.length;
+	reportLoadOrderNormalization(normalizePackageLoadOrder(flags.local), interactive);
+	const installedCount = toInstall.length - failed.length;
+	const failedIds = new Set(failed.map((pkg) => pkg.id));
+	const postInstall = runSelectedPostInstalls(selected, flags.local, failedIds);
+	const postInstallOk = reportPostInstallResults(postInstall, interactive);
 	if (failed.length === 0) {
-		if (skipped.length > 0) {
-			const skipList = skipped.map((p) => `- ${p.id} (${p.source})`).join("\n");
-			if (interactive) note(skipList, "Skipped");
-			else {
-				console.log(yellow("\nSkipped packages:"));
-				console.log(skipList);
-			}
-		}
+		if (!postInstallOk) return 1;
 		printCheatsheet(selected, interactive);
-		const authState = detectAuth();
-		printNextSteps(authState, installedCount, interactive);
+		printNextSteps(detectAuth(), installedCount, interactive);
 		return 0;
 	}
 
-	const failureList = failed.map((p) => `- ${p.id} (${p.source})`).join("\n");
+	const failureList = failed.map((p) => `- ${p.id} (${isFileInstall(p) ? fileInstallLabel(p) : p.source})`).join("\n");
 	if (interactive) {
 		note(failureList, "Failures");
 		outro(red(`Finished with ${failed.length} failure(s).`));
@@ -1089,15 +869,10 @@ function printNextSteps(state, installedCount, interactive) {
 	} else {
 		lines.push("Pi credentials: none detected.");
 		lines.push("");
-		lines.push("Run `pi`, then type `/login` inside Pi to sign in with a");
-		lines.push("subscription (Claude Pro/Max, ChatGPT Plus/Pro, Copilot, Gemini)");
-		lines.push("or set a provider env var (ANTHROPIC_API_KEY, OPENAI_API_KEY, …)");
-		lines.push("before launching pi.");
+		lines.push("Run `pi`, then type `/login` inside Pi to sign in, or set a provider API key.");
 	}
 
-	const title = installedCount > 0
-		? `Installed ${installedCount} package(s) — next steps`
-		: "Next steps";
+	const title = installedCount > 0 ? `Installed ${installedCount} catalog item(s) — next steps` : "Next steps";
 	const body = lines.join("\n");
 	if (interactive) {
 		note(body, title);
@@ -1115,7 +890,7 @@ function printCheatsheet(selected, interactive) {
 	else {
 		printHeader("What you've got:");
 		for (const line of lines) console.log(`  ${line}`);
-		console.log(dim("\nRemove pi packages with `pi remove <source>`."));
+		console.log(dim("\nRemove catalog items with `lazypi remove <id>`."));
 	}
 }
 
@@ -1132,82 +907,37 @@ function cmdStatus(flags) {
 		return 1;
 	}
 
-	const piCatalogSources = new Set(PACKAGES.flatMap((p) => [p.source, ...legacySourcesForPackage(p)]));
-	const installed = PACKAGES.filter((pkg) => packageInstallStatus(pkg, sources, flags.local).installed);
-	const legacy = PACKAGES.filter((pkg) => packageInstallStatus(pkg, sources, flags.local).legacy);
-	const missing = PACKAGES.filter((pkg) => !packageInstallStatus(pkg, sources, flags.local).present);
-	const others = [...sources].filter((src) => !piCatalogSources.has(src) && !PACKAGES.some((pkg) => isLegacySourceForPackage(pkg, src)));
+	const catalogSources = new Set(PACKAGES.map((p) => p.source));
+	const installed = PACKAGES.filter((pkg) => isPackageInstalled(pkg, sources));
+	const missing = PACKAGES.filter((pkg) => !isPackagePresent(pkg, sources));
+	const others = [...sources].filter((src) => !catalogSources.has(src));
 
 	printHeader(`Installed from LazyPi catalog (${installed.length}/${PACKAGES.length}):`);
 	if (installed.length === 0) console.log(dim("  none"));
-	for (const pkg of installed) {
-		console.log(`  ${green("✓")} [${pkg.category}] ${pkg.id.padEnd(20)} ${dim(pkg.source)}`);
-	}
-
-	printHeader(`Installed with legacy catalog sources (${legacy.length}):`);
-	if (legacy.length === 0) console.log(dim("  none"));
-	for (const pkg of legacy) {
-		const detail = pkg.id === COMPOUND_PKG_ID
-			? dim("legacy LazyPi state detected — run `lazypi update` to migrate to CE 3")
-			: findLegacyInstalledSources(pkg, sources).map((src) => dim(src)).join(", ");
-		console.log(`  ${yellow("!")} [${pkg.category}] ${pkg.id.padEnd(20)} ${detail}`);
-	}
+	for (const pkg of installed) console.log(`  ${green("✓")} [${pkg.category}] ${pkg.id.padEnd(20)} ${dim(isFileInstall(pkg) ? fileInstallLabel(pkg) : pkg.source)}`);
 
 	printHeader(`Missing from LazyPi catalog (${missing.length}):`);
 	if (missing.length === 0) console.log(dim("  none — full catalog is installed"));
-	for (const pkg of missing) {
-		console.log(`  ${dim("·")} [${pkg.category}] ${pkg.id.padEnd(20)} ${dim(pkg.source)}`);
-	}
+	for (const pkg of missing) console.log(`  ${dim("·")} [${pkg.category}] ${pkg.id.padEnd(20)} ${dim(isFileInstall(pkg) ? fileInstallLabel(pkg) : pkg.source)}`);
 
-	printHeader(`Other Pi packages outside the LazyPi catalog (${others.length}):`);
+	printHeader(`Other Pi extensions outside the LazyPi catalog (${others.length}):`);
 	if (others.length === 0) console.log(dim("  none"));
 	for (const src of others) console.log(`  ${cyan("·")} ${src}`);
 
 	return 0;
 }
 
-function resolveUpdateCatalogIds(flags) {
-	const { sources, error } = readInstalledSources(flags.local);
-	if (error) return { ids: [], error };
-	const selectedIds = resolveSelection(flags);
-	return {
-		ids: PACKAGES
-			.filter((pkg) => selectedIds.has(pkg.id) && isPackagePresent(pkg, sources, flags.local))
-			.map((pkg) => pkg.id),
-		error: null,
-	};
-}
-
 // ---------------------------------------------------------------------------
 // update
 // ---------------------------------------------------------------------------
 async function cmdUpdate(flags) {
+	if (flags.only || flags.except) {
+		console.error(red("`update` does not filter individual extensions; use `pi update <source>` for one extension."));
+		return 2;
+	}
 	if (!(await ensurePi(flags))) return 127;
-
-	const updateSelection = resolveUpdateCatalogIds(flags);
-	if (updateSelection.error) {
-		console.error(red(`Could not parse ${settingsPath(flags.local)} — ${updateSelection.error}`));
-		return 1;
-	}
-
 	reportLoadOrderNormalization(normalizePackageLoadOrder(flags.local), false);
-
-	if (updateSelection.ids.includes(COMPOUND_PKG_ID)) {
-		console.log(bold("Step 1/2: refresh Compound Engineering"));
-		const installCode = await cmdInstall({
-			...flags,
-			command: "install",
-			yes: true,
-			only: [COMPOUND_PKG_ID],
-			except: null,
-			forceIds: [COMPOUND_PKG_ID],
-		});
-		if (installCode !== 0) return installCode;
-		console.log(bold("\nStep 2/2: pi update"));
-	} else {
-		console.log(bold("pi update"));
-	}
-
+	console.log(bold(flags.local ? "pi update --extensions" : "pi update"));
 	return runPi(flags.local ? ["update", "--extensions"] : ["update"]);
 }
 
@@ -1230,17 +960,12 @@ function cmdDoctor(flags) {
 
 	printHeader("Environment");
 	const nodeMajor = Number(process.versions.node.split(".")[0]);
-	if (Number.isFinite(nodeMajor) && nodeMajor >= 18) pass(`Node ${process.versions.node}`);
-	else fail(`Node ${process.versions.node} — LazyPi requires Node >= 18`);
-
+	if (Number.isFinite(nodeMajor) && nodeMajor >= 20) pass(`Node ${process.versions.node}`);
+	else fail(`Node ${process.versions.node} — LazyPi requires Node >= 20`);
 	if (hasCmd("npm")) pass("npm is on PATH");
 	else fail("npm is not on PATH — LazyPi can't install Pi for you");
-
 	if (hasCmd("git")) pass("git is on PATH");
-	else warn("git is not on PATH — required by git-based catalog packages");
-
-	if (hasCmd("bun")) pass("bun is on PATH — required for official Compound Engineering from Every");
-	else warn("bun is not on PATH — official Compound Engineering from Every will be skipped by LazyPi", { fatal: false });
+	else warn("git is not on PATH — required by Git-based extensions");
 
 	printHeader("Pi");
 	if (hasCmd("pi")) {
@@ -1249,47 +974,24 @@ function cmdDoctor(flags) {
 		const vout = (v.stdout ?? "").trim() || (v.stderr ?? "").trim();
 		if (vout) pass(`pi --version: ${vout}`);
 		else warn("Could not read `pi --version` output");
-	} else {
-		fail("`pi` is not on PATH — run `npx @robzolkos/lazypi` to install it");
-	}
+	} else fail(`\`pi\` is not on PATH — run ${PACKAGE_COMMAND} to install it`);
 
 	printHeader("Settings");
-	const { sources, path, exists, error } = readInstalledSources(flags.local);
-	if (!exists) warn(`${path} does not exist yet (Pi has not been run)`);
-	else if (error) fail(`${path} is not valid JSON — ${error}`);
+	const settingsState = readInstalledSources(flags.local);
+	if (!settingsState.exists) warn(`${settingsState.path} does not exist yet (Pi has not been run)`);
+	else if (settingsState.error) fail(`${settingsState.path} is not valid JSON — ${settingsState.error}`);
 	else {
-		pass(`${path} is readable`);
-		const loadOrder = packageLoadOrderStatus(flags.local);
-		if (loadOrder.checked && loadOrder.ok) pass("pi-extension-settings loads before pi-powerbar");
-		else if (loadOrder.checked) warn(`pi-extension-settings loads after pi-powerbar — run ${bold("npx @robzolkos/lazypi --yes")} to repair package load order`);
+		pass(`${settingsState.path} is readable`);
+		const order = packageLoadOrderStatus(flags.local);
+		if (order.cycle) fail("Catalog package load-order metadata contains a cycle");
+		else if (order.checked && order.ok) pass("Catalog package load order is valid");
+		else if (order.checked) warn("Catalog package load order is stale — run LazyPi install to repair it", { fatal: false });
 	}
 
-	printHeader("Catalog package health");
-	const compound = compoundInstallState(flags.local);
-	if (compound.mode === "invalid-manifest") {
-		fail(`Compound Engineering manifest is invalid — ${compound.manifest.error}`);
-	} else if (compound.mode === "invalid-legacy") {
-		fail(`Compound Engineering legacy state is invalid — ${compound.legacy.error}`);
-	} else if (compound.mode === "manifest") {
-		pass(`Compound Engineering manifest found at ${compound.manifest.path}`);
-		const compoundRoot = compoundInstallRoot(flags.local);
-		const skillsDir = join(compoundRoot, "skills");
-		const agentsDir = join(compoundRoot, "agents");
-		if (existsSync(skillsDir)) pass(`Compound Engineering skills directory exists at ${skillsDir}`);
-		else fail(`Compound Engineering skills directory is missing at ${skillsDir}`);
-		if (existsSync(agentsDir)) pass(`Compound Engineering agents directory exists at ${agentsDir}`);
-		else fail(`Compound Engineering agents directory is missing at ${agentsDir}`);
-		const subagentsPkg = PACKAGES.find((pkg) => pkg.id === "subagents");
-		if (subagentsPkg && sources.has(subagentsPkg.source)) pass("pi-subagents installed");
-		else fail("pi-subagents is missing — Compound Engineering requires it");
-		const askUserPkg = PACKAGES.find((pkg) => pkg.id === "pi-ask-user");
-		if (askUserPkg && sources.has(askUserPkg.source)) pass("pi-ask-user installed");
-		else fail("pi-ask-user is missing — Compound Engineering requires it");
-	} else if (compound.mode === "legacy") {
-		warn(`Legacy Compound Engineering marker found at ${compound.legacy.path} — run ${bold("npx @robzolkos/lazypi update")} to migrate to CE 3`);
-	} else {
-		console.log(`  ${dim("·")} Compound Engineering not installed`);
-	}
+	printHeader("Catalog");
+	const extensionCount = PACKAGES.filter((pkg) => !isFileInstall(pkg)).length;
+	const fileEntryCount = PACKAGES.length - extensionCount;
+	pass(`${extensionCount} Pi extension(s) and ${fileEntryCount} file-based item(s) configured`);
 
 	printHeader("Auth");
 	const auth = detectAuth();
@@ -1316,23 +1018,20 @@ function cmdDoctor(flags) {
 async function cmdRemove(flags, targets) {
 	if (targets.length === 0) {
 		if (!isInteractive()) {
-			console.error(red("Usage: npx @robzolkos/lazypi remove <id|source> [...]"));
+			console.error(red(`Usage: ${PACKAGE_COMMAND} remove <id|source> [...]`));
 			return 2;
 		}
 		const { sources } = readInstalledSources(flags.local);
-		const installedPkgs = PACKAGES.filter((p) => isPackagePresent(p, sources, flags.local));
+		const installedPkgs = PACKAGES.filter((p) => isPackagePresent(p, sources));
 		if (installedPkgs.length === 0) {
-			console.log(yellow("No catalog packages are installed."));
+			console.log(yellow("No catalog extensions are installed."));
 			return 0;
 		}
 		const idWidth = Math.max(...installedPkgs.map((p) => p.id.length));
 		const { multiselect } = await import("@clack/prompts");
 		const picked = await multiselect({
-			message: "Select packages to remove",
-			options: installedPkgs.map((p) => ({
-				value: p.id,
-				label: `${p.id.padEnd(idWidth + 2)}${p.description}`,
-			})),
+			message: "Select extensions to remove",
+			options: installedPkgs.map((p) => ({ value: p.id, label: `${p.id.padEnd(idWidth + 2)}${p.description}` })),
 			required: false,
 		});
 		abortIfCancelled(picked);
@@ -1343,41 +1042,33 @@ async function cmdRemove(flags, targets) {
 		targets = picked;
 	}
 
-	const { sources: installedSources } = readInstalledSources(flags.local);
 	let exitCode = 0;
 	for (const target of targets) {
-		// Resolve a catalog id to its source string, or pass through raw sources
 		const pkg = PACKAGES.find((p) => p.id === target);
-		const source = pkg ? pkg.source : target;
-
-		if ((pkg && pkg.id === COMPOUND_PKG_ID) || source === COMPOUND_SOURCE) {
-			const result = removeCompound(flags.local);
-			if (result !== 0) {
-				console.error(red(`Failed to remove ${target}`));
-				exitCode = 1;
+		if (pkg && isFileInstall(pkg)) {
+			const files = entryFileTargets(pkg).filter((file) => existsSync(file.targetPath));
+			if (files.length === 0) {
+				console.log(yellow(`${pkg.category === "themes" ? "Theme" : "Agent file"} ${pkg.id} is not installed.`));
+				continue;
+			}
+			for (const file of files) {
+				rmSync(file.targetPath);
+				const kindLabel = file.kind === "theme" ? "theme" : "agent file";
+				console.log(green(`Removed ${kindLabel} ${file.name}.`));
 			}
 			continue;
 		}
-
-		const sourcesToRemove = pkg
-			? [
-				...(installedSources.has(pkg.source) ? [pkg.source] : []),
-				...findLegacyInstalledSources(pkg, installedSources),
-			]
-			: [source];
-		const uniqueSources = [...new Set(sourcesToRemove.length > 0 ? sourcesToRemove : [source])];
-		for (const resolvedSource of uniqueSources) {
-			const piArgs = flags.local ? ["remove", "-l", resolvedSource] : ["remove", resolvedSource];
-			const result = spawnCommand("pi", piArgs, { stdio: "inherit" });
-			if (result.status !== 0) {
-				console.error(red(`Failed to remove ${target}`));
-				exitCode = 1;
-				break;
-			}
+		const source = pkg ? pkg.source : target;
+		const piArgs = flags.local ? ["remove", "-l", source] : ["remove", source];
+		const result = spawnCommand("pi", piArgs, { stdio: "inherit" });
+		if (result.status !== 0) {
+			console.error(red(`Failed to remove ${target}`));
+			exitCode = 1;
 		}
 	}
 	return exitCode;
 }
+
 
 // ---------------------------------------------------------------------------
 // Main

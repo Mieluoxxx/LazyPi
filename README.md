@@ -1,82 +1,101 @@
 # LazyPi
 
-The [Pi](https://github.com/earendil-works/pi-mono) coding agent is minimal by design. LazyPi is opinionated by design. Run one command and get a complete, curated Pi setup — everything selected by default, nothing to research, nothing to configure. Remove what you don't want later.
+LazyPi is a small, opinionated Pi extension-manager template. It installs a catalog of Pi extensions, tracks what is installed in Pi settings, and provides status, update, doctor, and remove commands.
+
+Customize two things before publishing:
+
+1. Change `name` in `package.json` to your package, for example `@your-scope/lazypi`.
+2. Replace the `PACKAGES` array in `bin/lazypi.mjs` with your catalog.
+
+The CLI reads its package name from `package.json`, so help and error messages update automatically. Catalog dependencies, load-order constraints, and selected-package post-install configuration also live on catalog entries; no third registry is required.
 
 ## Quick start
 
 ```bash
-npx @robzolkos/lazypi
+npx @your-scope/lazypi
 ```
 
-LazyPi will:
+Use `--yes` for a non-interactive install:
 
-1. Install `pi` for you if it isn't installed yet.
-2. Ask if you want to install all the packages or choose which to install.
+```bash
+npx @your-scope/lazypi --yes
+```
 
-That setup includes agent tooling, memory, planning, terminal-native diff review, a Claude Code CLI provider, interactive shell overlays for long-running CLIs, usage tracking, and themes.
-
-That's it.  Once done - run `pi` and experience a feature rich coding agent experience.
-
-Install is **idempotent** — LazyPi reads your Pi settings and skips any package that is already installed, so re-running is safe.
+LazyPi installs Pi if it is not already available, then installs the selected catalog extensions. Re-running the command is idempotent: extensions already present in Pi settings are skipped.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `npx @robzolkos/lazypi` | Install all or selected catalog (interactive picker by default) |
-| `npx @robzolkos/lazypi remove <id>` | Remove a catalog package by id (or pass a raw pi source) |
-| `npx @robzolkos/lazypi status` | Show which catalog packages are installed, missing, or extra |
-| `npx @robzolkos/lazypi update` | Run `pi update` for installed Pi packages |
-| `npx @robzolkos/lazypi doctor` | Check your environment for common problems |
+| `npx @your-scope/lazypi` | Install the catalog, using the interactive picker on a TTY |
+| `npx @your-scope/lazypi install --only core` | Install only selected categories or extension ids |
+| `npx @your-scope/lazypi status` | Show installed, missing, and extra Pi extensions |
+| `npx @your-scope/lazypi update` | Run the overall Pi extension update |
+| `npx @your-scope/lazypi doctor` | Check Node, npm, git, Pi, settings, and auth |
+| `npx @your-scope/lazypi remove <id>` | Remove a catalog extension by id |
 
-## Updating
-
-```bash
-npx @robzolkos/lazypi update
-```
-
-## Removing packages
+`update --only` does not update a single extension. To update one Pi extension, use Pi directly:
 
 ```bash
-npx @robzolkos/lazypi remove
+pi update npm:your-package
 ```
 
-Shows an interactive picker of installed packages. Or pass ids directly to skip the picker:
+## Install options
 
 ```bash
-npx @robzolkos/lazypi remove subagents
-npx @robzolkos/lazypi remove npm:pi-subagents@0.13.3   # raw pi source also works
+npx @your-scope/lazypi --only core
+npx @your-scope/lazypi --only subagents,mcp
+npx @your-scope/lazypi --except tools
+npx @your-scope/lazypi --local
+npx @your-scope/lazypi --yes
 ```
 
-There is nothing to "uninstall" for LazyPi itself — `npx` doesn't leave it around.
+Global settings are read from `~/.pi/agent/settings.json`, or from the directory specified by `PI_CODING_AGENT_DIR`. `--local` uses `.pi/settings.json` in the current project.
 
-## Troubleshooting
+When catalog metadata declares `loadBefore`, install repairs existing settings order and creates a timestamped `.bak` file. This keeps extensions that depend on load order working after the template catalog changes.
 
-Run the built-in health check with `npx @robzolkos/lazypi doctor`.
+When a selected package declares `postInstall`, LazyPi runs that JSON merge only when all of its `requiresSelected` package ids are selected in the same install invocation. It preserves unrelated configuration and creates a timestamped backup when an existing file changes.
 
-## Site / docs
+File-based catalog entries ship JSON files that LazyPi installs into Pi's agent directory. `themes` entries copy files from `themes/` into the agent themes directory; entries with `agentFiles` (for example the `config`-category `global-agents` entry) copy files from `agent/` to the agent root (`~/.pi/agent/AGENTS.md`). An existing file with the same name is backed up with a timestamped `.lazypi.<timestamp>.bak` before it is overwritten; identical files are skipped. These installs never modify settings such as `settings.theme` — activate a theme by setting it there yourself. `--local` does not relocate file-based entries; they are always installed agent-globally.
+The only catalog source of truth is `PACKAGES` in [`bin/lazypi.mjs`](bin/lazypi.mjs). Each entry has:
 
-The site at [lazypi.org](https://lazypi.org) lives in `docs/` and is a Jekyll site compiled by GitHub Pages automatically on push to `master`.
+- `id` — selector used by `--only`, `--except`, and `remove`
+- `category` — any category used by your catalog; the CLI derives the category list automatically
+- `source` — an npm or Git Pi install source (required for extension entries; file-based entries use `themeFiles`/`agentFiles` instead)
+- `description` — short picker text
+- `hint` — post-install guidance
+- `dependencies` — optional package ids automatically selected with this package
+- `loadBefore` — optional package ids that this package must load before
+- `postInstall` — optional selected-package JSON merge rules run after a matching install
+- `themeFiles` — optional theme JSON files (relative to this repo) that a `themes` entry copies into Pi's themes directory
+- `agentFiles` — optional agent config files (relative to this repo) copied to the Pi agent root (for example `agent/AGENTS.md`)
+Replace the complete `PACKAGES` array with your own entries. Keep dependency, load-order, and selected-package post-install relationships in the entries themselves so the catalog remains the only extension list to maintain.
 
-To preview locally (requires Ruby + Bundler):
+## Development
+
+Requirements:
+
+- Node.js 20 or newer
+- npm
+- Pi for integration and install-flow checks
+
+Install dependencies and run the tests:
 
 ```bash
-cd docs && bundle install   # first time only
-npm run docs:serve          # serves at http://localhost:4000 with livereload
+npm ci
+npm test
+node scripts/packed-cli-smoke.mjs
 ```
 
-Shared nav and footer are in `docs/_includes/`. Layouts are in `docs/_layouts/`. CSS variables and nav styles are in `docs/assets/css/site.css`.
+The packed smoke test verifies that the npm artifact exposes the `lazypi` binary and that `npx`-style execution can invoke it.
 
-## Releasing
+## Publishing
 
-LazyPi uses **Release Please** and **npm trusted publishing**.
+After changing `package.json` and `PACKAGES`, verify the packed artifact:
 
-To release a new version:
+```bash
+npm pack --dry-run
+npm publish --access public --provenance
+```
 
-- Merge your normal PRs into `master`
-- Merge the Release Please release PR when you are ready to publish
-- GitHub creates the tag/release and publishes to npm automatically
-
----
-
-For the full list of included packages and themes, see [lazypi.org](https://lazypi.org).
+The repository uses Release Please for versioning and GitHub Actions for publishing.

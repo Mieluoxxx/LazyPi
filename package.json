@@ -1,16 +1,8 @@
 {
-  "name": "@robzolkos/lazypi",
-  "version": "0.6.4",
-  "description": "Opinionated one-shot installer for a full-featured Pi coding agent setup.",
+  "name": "@your-scope/lazypi",
+  "version": "0.1.0",
+  "description": "Template Pi extension manager and catalog installer.",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/robzolkos/LazyPi"
-  },
-  "bugs": {
-    "url": "https://github.com/robzolkos/LazyPi/issues"
-  },
-  "homepage": "https://github.com/robzolkos/LazyPi",
   "type": "module",
   "bin": {
     "lazypi": "bin/lazypi.mjs"
@@ -18,13 +10,14 @@
   "files": [
     "bin",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "themes",
+    "agent"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "docs:serve": "cd docs && bundle exec jekyll serve --livereload",
     "test": "node --test"
   },
   "dependencies": {

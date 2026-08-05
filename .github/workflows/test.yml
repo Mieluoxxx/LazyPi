@@ -21,8 +21,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
 
       - name: Install pi
         run: npm install -g @earendil-works/pi-coding-agent
