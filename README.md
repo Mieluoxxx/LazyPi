@@ -4,7 +4,7 @@ LazyPi is a small, opinionated Pi extension-manager template. It installs a cata
 
 Customize two things before publishing:
 
-1. Change `name` in `package.json` to your package, for example `@your-scope/lazypi`.
+1. Change `name` in `package.json` to your package, for example `@moguw/lazypi`.
 2. Replace the `PACKAGES` array in `bin/lazypi.mjs` with your catalog.
 
 The CLI reads its package name from `package.json`, so help and error messages update automatically. Catalog dependencies, load-order constraints, and selected-package post-install configuration also live on catalog entries; no third registry is required.
@@ -12,13 +12,13 @@ The CLI reads its package name from `package.json`, so help and error messages u
 ## Quick start
 
 ```bash
-npx @your-scope/lazypi
+npx @moguw/lazypi
 ```
 
 Use `--yes` for a non-interactive install:
 
 ```bash
-npx @your-scope/lazypi --yes
+npx @moguw/lazypi --yes
 ```
 
 LazyPi installs Pi if it is not already available, then installs the selected catalog extensions. Re-running the command is idempotent: extensions already present in Pi settings are skipped.
@@ -27,12 +27,12 @@ LazyPi installs Pi if it is not already available, then installs the selected ca
 
 | Command | What it does |
 | --- | --- |
-| `npx @your-scope/lazypi` | Install the catalog, using the interactive picker on a TTY |
-| `npx @your-scope/lazypi install --only core` | Install only selected categories or extension ids |
-| `npx @your-scope/lazypi status` | Show installed, missing, and extra Pi extensions |
-| `npx @your-scope/lazypi update` | Run the overall Pi extension update |
-| `npx @your-scope/lazypi doctor` | Check Node, npm, git, Pi, settings, and auth |
-| `npx @your-scope/lazypi remove <id>` | Remove a catalog extension by id |
+| `npx @moguw/lazypi` | Install the catalog, using the interactive picker on a TTY |
+| `npx @moguw/lazypi install --only core` | Install only selected categories or extension ids |
+| `npx @moguw/lazypi status` | Show installed, missing, and extra Pi extensions |
+| `npx @moguw/lazypi update` | Run the overall Pi extension update |
+| `npx @moguw/lazypi doctor` | Check Node, npm, git, Pi, settings, and auth |
+| `npx @moguw/lazypi remove <id>` | Remove a catalog extension by id |
 
 `update --only` does not update a single extension. To update one Pi extension, use Pi directly:
 
@@ -43,11 +43,11 @@ pi update npm:your-package
 ## Install options
 
 ```bash
-npx @your-scope/lazypi --only core
-npx @your-scope/lazypi --only subagents,mcp
-npx @your-scope/lazypi --except tools
-npx @your-scope/lazypi --local
-npx @your-scope/lazypi --yes
+npx @moguw/lazypi --only core
+npx @moguw/lazypi --only subagents,mcp
+npx @moguw/lazypi --except tools
+npx @moguw/lazypi --local
+npx @moguw/lazypi --yes
 ```
 
 Global settings are read from `~/.pi/agent/settings.json`, or from the directory specified by `PI_CODING_AGENT_DIR`. `--local` uses `.pi/settings.json` in the current project.
