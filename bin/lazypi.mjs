@@ -24,7 +24,7 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching." },
+	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ requiresSelected: ["sidebar"], jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" } } } }] },
 	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
 	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
 	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "Second-opinion reviewer", hint: "Escalate to a stronger reviewer model for a plan, correction, or stop signal." },
@@ -32,10 +32,11 @@ export const PACKAGES = [
 	{ id: "goal", category: "core", source: "npm:@narumitw/pi-goal", description: "Goal tracking", hint: "Track goals across Pi sessions." },
 	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "Vision support", hint: "Add image-aware capabilities to Pi." },
 	// ui
-	{ id: "interactive-shell", category: "ui", source: "npm:pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
 	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "Terminal user interface", hint: "Add a richer terminal UI for Pi workflows." },
 	{ id: "tool-display", category: "ui", source: "npm:pi-tool-display", description: "Tool result display", hint: "Customize how Pi tool results are presented.", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
+	{ id: "sidebar", category: "ui", source: "npm:@esso0428/pi-sidebar", description: "Floating right sidebar", hint: "Show model, context, git, and session metadata in a right sidebar overlay; toggle with ctrl+shift+s." },
 	// tools
+	{ id: "interactive-shell", category: "tools", source: "npm:pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
 	{ id: "btw", category: "tools", source: "npm:pi-btw", description: "Side-chat popover", hint: "Ask quick questions without polluting your conversation history." },
 	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "Hashline editing", hint: "Add hash-anchored read and edit output." },
 	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "FFF workflow", hint: "Add the FFF workflow to Pi." },
@@ -43,6 +44,10 @@ export const PACKAGES = [
 	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff review and annotation", hint: "Walk the diff, annotate changes, and send feedback to the agent." },
 	{ id: "agent-browser", category: "tools", source: "npm:pi-agent-browser-native", description: "Browser automation", hint: "Drive real browser sessions to browse, click, and capture screenshots." },
 	{ id: "plan-mode", category: "tools", source: "npm:@narumitw/pi-plan-mode", description: "Read-only plan mode", hint: "Add a Codex-like /plan mode for structured planning before edits." },
+	{ id: "session-rename", category: "tools", source: "npm:@moguw/pi-session-rename", description: "Session auto-naming", hint: "Auto-name Pi sessions from conversation context; manage with /rename." },
+	{ id: "session-migrate", category: "tools", source: "npm:@moguw/pi-session-migrate", description: "Session migration", hint: "Migrate Pi sessions after a project moves to a new path; run /migrate." },
+	// codex
+	{ id: "apply-patch", category: "codex", source: "git:github.com/code-yeongyu/pi-apply-patch", description: "Codex-style patch editing", hint: "Adds the Codex apply_patch tool; replaces write/edit while a GPT model is active." },
 	// themes
 	{ id: "vesper-dark", category: "themes", themeFiles: ["themes/vesper-dark.json"], description: "Vesper dark theme", hint: "Warm peach-and-mint dark theme; set settings.theme to \"vesper-dark\" to activate." },
 	{ id: "vesper-light", category: "themes", themeFiles: ["themes/vesper-light.json"], description: "Vesper light theme", hint: "Light variant of the Vesper theme; set settings.theme to \"vesper-light\" to activate." },
