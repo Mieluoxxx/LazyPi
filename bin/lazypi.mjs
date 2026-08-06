@@ -24,7 +24,7 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ requiresSelected: ["sidebar"], jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" } } } }] },
+	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ requiresSelected: ["sidebar"], jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
 	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
 	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
 	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "Second-opinion reviewer", hint: "Escalate to a stronger reviewer model for a plan, correction, or stop signal." },
