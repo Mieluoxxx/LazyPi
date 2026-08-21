@@ -179,7 +179,7 @@ test("local installation writes compatibility config under the project .pi root"
 test("same-run selection reconciles before the already-installed early return", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
-	writeSettings(state.agentDir, ["npm:pi-tool-display", "npm:pi-hashline-edit-pro"]);
+	writeSettings(state.agentDir, ["npm:@moguw/pi-tool-display", "npm:pi-hashline-edit-pro"]);
 	const callsPath = join(state.root, "pi-calls.log");
 	const result = installBoth({ ...state, callsPath });
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);

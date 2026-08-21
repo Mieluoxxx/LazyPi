@@ -8,7 +8,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	cancel as clackCancel,
 	confirm as clackConfirm,
-	groupMultiselect,
 	intro,
 	isCancel,
 	log,
@@ -24,7 +23,7 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ requiresSelected: ["sidebar"], jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
+	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
 	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
 	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
 	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "Second-opinion reviewer", hint: "Escalate to a stronger reviewer model for a plan, correction, or stop signal." },
@@ -33,19 +32,18 @@ export const PACKAGES = [
 	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "Vision support", hint: "Add image-aware capabilities to Pi." },
 	// ui
 	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "Terminal user interface", hint: "Add a richer terminal UI for Pi workflows." },
-	{ id: "tool-display", category: "ui", source: "npm:pi-tool-display", description: "Tool result display", hint: "Customize how Pi tool results are presented.", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
-	{ id: "sidebar", category: "ui", source: "npm:@esso0428/pi-sidebar", description: "Floating right sidebar", hint: "Show model, context, git, and session metadata in a right sidebar overlay; toggle with ctrl+shift+s." },
+	{ id: "tool-display", category: "ui", source: "npm:@moguw/pi-tool-display", description: "Tool result display", hint: "Customize how Pi tool results are presented.", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
 	// tools
-	{ id: "interactive-shell", category: "tools", source: "npm:pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
-	{ id: "btw", category: "tools", source: "npm:pi-btw", description: "Side-chat popover", hint: "Ask quick questions without polluting your conversation history." },
+	{ id: "interactive-shell", category: "tools", source: "npm:@moguw/pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
 	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "Hashline editing", hint: "Add hash-anchored read and edit output." },
 	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "FFF workflow", hint: "Add the FFF workflow to Pi." },
 	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "Code simplify review", hint: "Reviews recently changed code for clarity and maintainability." },
 	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff review and annotation", hint: "Walk the diff, annotate changes, and send feedback to the agent." },
-	{ id: "agent-browser", category: "tools", source: "npm:pi-agent-browser-native", description: "Browser automation", hint: "Drive real browser sessions to browse, click, and capture screenshots." },
-	{ id: "plan-mode", category: "tools", source: "npm:@narumitw/pi-plan-mode", description: "Read-only plan mode", hint: "Add a Codex-like /plan mode for structured planning before edits." },
-	{ id: "session-rename", category: "tools", source: "npm:@moguw/pi-session-rename", description: "Session auto-naming", hint: "Auto-name Pi sessions from conversation context; manage with /rename." },
-	{ id: "session-migrate", category: "tools", source: "npm:@moguw/pi-session-migrate", description: "Session migration", hint: "Migrate Pi sessions after a project moves to a new path; run /migrate." },
+	{ id: "ponytail", category: "tools", source: "git:github.com/DietrichGebert/ponytail@v4.9.0", description: "Minimal coding guidance", hint: "Favor YAGNI, existing code, and the smallest correct implementation." },
+	// herdr
+	{ id: "session-rename", category: "herdr", source: "npm:@moguw/pi-session-rename", description: "Session auto-naming", hint: "Auto-name Pi sessions from conversation context; manage with /rename." },
+	{ id: "session-migrate", category: "herdr", source: "npm:@moguw/pi-session-migrate", description: "Session migration", hint: "Migrate Pi sessions after a project moves to a new path; run /migrate." },
+	{ id: "session-fork", category: "herdr", source: "npm:@moguw/pi-session-fork", description: "Session forking", hint: "Fork sessions into Herdr panes or tabs, or ask inline and outline side questions with /btw." },
 	// codex
 	{ id: "apply-patch", category: "codex", source: "git:github.com/code-yeongyu/pi-apply-patch", description: "Codex-style patch editing", hint: "Adds the Codex apply_patch tool; replaces write/edit while a GPT model is active." },
 	// themes
@@ -261,13 +259,13 @@ ${bold("Install options:")}
   --only <list>       Install only the given categories or extension ids
   --except <list>     Install everything except the given categories or ids
   -l, --local         Install into the current project (.pi/settings.json)
-  -y, --yes           Skip the picker and confirmation prompt
+  -y, --yes           Skip interactive selection and confirmation prompts
   -h, --help          Show this help
 
 ${bold("Default behaviour:")}
   - Every catalog extension is installed by default.
-  - On a TTY, an interactive picker starts with everything selected.
-  - With --yes, --only, or --except the picker is skipped.
+  - On a TTY, choose everything or review packages one by one with recommendation reasons.
+  - With --yes, --only, or --except interactive selection is skipped.
   - update does not filter one extension; use pi update <source> for that.
 
 ${bold("Categories:")}
@@ -695,7 +693,7 @@ async function confirm(message, initial = false) {
 async function askLazyOrPick(totalCount) {
 	const options = [
 		{ value: "lazy", label: `Install everything`, hint: `all ${totalCount} packages` },
-		{ value: "pick", label: "Pick packages", hint: "open a checklist" },
+		{ value: "pick", label: "Review packages one by one", hint: "see each package's recommendation" },
 	];
 
 	const choice = await select({
@@ -706,27 +704,21 @@ async function askLazyOrPick(totalCount) {
 	return abortIfCancelled(choice);
 }
 
-async function runPicker(initialSelected) {
-	const idWidth = Math.max(...PACKAGES.map((p) => p.id.length));
-	const options = {};
-	for (const cat of CATEGORIES) {
-		const pkgs = PACKAGES.filter((p) => p.category === cat);
-		if (pkgs.length === 0) continue;
-		options[cat] = pkgs.map((pkg) => ({
-			value: pkg.id,
-			label: `${pkg.id.padEnd(idWidth + 2)}${pkg.description}`,
-		}));
+export async function selectPackagesOneByOne(packages, initialSelected = new Set(), ask = confirm) {
+	const selected = new Set();
+	for (const pkg of packages) {
+		const message = [
+			`Install [${pkg.category}] ${pkg.id}?`,
+			`  ${pkg.description}`,
+			`  Recommended because: ${pkg.hint}`,
+		].join("\n");
+		if (await ask(message, initialSelected.has(pkg.id))) selected.add(pkg.id);
 	}
+	return selected;
+}
 
-	const picked = await groupMultiselect({
-		message: "Pick packages to install",
-		options,
-		initialValues: [...initialSelected],
-		required: false,
-		selectableGroups: true,
-	});
-	abortIfCancelled(picked);
-	return new Set(picked);
+async function runPicker(initialSelected) {
+	return selectPackagesOneByOne(PACKAGES, initialSelected);
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 LazyPi is a reusable Pi extension-manager template. One repository holds a curated `PACKAGES` catalog and an `npx` CLI that installs, audits, updates, and removes Pi extensions from that catalog.
 
-The catalog is the only extension list you maintain. It lives in `PACKAGES` inside [`bin/lazypi.mjs`](bin/lazypi.mjs), and every CLI command — help, picker, install, status, doctor, remove — derives from it automatically.
+The catalog is the only extension list you maintain. It lives in `PACKAGES` inside [`bin/lazypi.mjs`](bin/lazypi.mjs), and every CLI command — help, selection flow, install, status, doctor, remove — derives from it automatically.
 
 Fork it, replace the catalog with your own Pi extensions, publish under your npm name, and you have a personal extension manager you can hand to any machine with `npx`.
 
@@ -11,7 +11,7 @@ Fork it, replace the catalog with your own Pi extensions, publish under your npm
 The published package is `@moguw/lazypi`. You do not need to clone anything to use it:
 
 ```bash
-npx @moguw/lazypi               # install the whole catalog (interactive picker on a TTY)
+npx @moguw/lazypi               # choose all or review packages one by one on a TTY
 npx @moguw/lazypi --yes         # same, no prompts
 npx @moguw/lazypi status        # installed / missing / extra extensions
 npx @moguw/lazypi doctor        # check Node, npm, git, Pi, settings, catalog, auth
@@ -72,7 +72,7 @@ npm install --package-lock-only
 | `id` | Selector used by `--only`, `--except`, and `remove` |
 | `category` | Any category you like; the CLI derives the category list automatically, nothing to register elsewhere |
 | `source` | A Pi install source — `npm:<package>` or `git:...` |
-| `description` | Short text shown in the picker |
+| `description` | Short text shown during package selection |
 | `hint` | Post-install guidance shown by `status` and the install cheatsheet |
 
 Categories are derived automatically from the `category` values, so adding a new one never requires a separate list edit. Keep entries grouped by category and ordered like the existing ones.
