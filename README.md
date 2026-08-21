@@ -13,6 +13,7 @@ The published package is `@moguw/lazypi`. You do not need to clone anything to u
 ```bash
 npx @moguw/lazypi               # choose all or review packages one by one on a TTY
 npx @moguw/lazypi --yes         # same, no prompts
+npx @moguw/lazypi --force       # remove all installed extensions, then reinstall the catalog
 npx @moguw/lazypi status        # installed / missing / extra extensions
 npx @moguw/lazypi doctor        # check Node, npm, git, Pi, settings, catalog, auth
 npx @moguw/lazypi update        # run Pi's overall extension update
@@ -20,6 +21,8 @@ npx @moguw/lazypi remove <id>   # remove a catalog extension by id
 ```
 
 LazyPi installs Pi itself if it is not already on PATH, then installs the selected catalog extensions. Re-running is idempotent: extensions already present in Pi settings are skipped.
+
+Use `--force` for a clean reinstall: LazyPi removes every installed Pi extension (backing up `settings.json` first), then installs the full catalog again. Themes and agent files are resynced with a backup before overwrite, so the final `settings.json` reflects exactly the catalog.
 
 Select what gets installed:
 

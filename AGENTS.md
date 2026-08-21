@@ -20,7 +20,7 @@ Catalog load-order metadata is applied to existing settings without discarding u
 
 Selected-package `postInstall` JSON merges run only when their required package ids are selected in the same LazyPi install invocation. They preserve unrelated configuration and create a timestamped backup before changing an existing file.
 
-File-based catalog entries ship JSON files installed into Pi's agent directory: `themes` entries copy from `themes/` into the agent themes directory; `config` entries with `agentFiles` (for example `agent/AGENTS.md`) copy to the agent root. An existing file is backed up with a timestamped `.lazypi.<timestamp>.bak` before being overwritten; identical files are skipped. These installs never modify settings such as `settings.theme`.
+File-based catalog entries ship JSON files installed into Pi's agent directory: `themes` entries copy from `themes/` into the agent themes directory; `config` entries with `agentFiles` (for example `agent/AGENTS.md`) copy to the agent root. An existing file is backed up with a timestamped `.lazypi.<timestamp>.bak` before being overwritten; identical files are skipped unless `--force` is used. These installs never modify settings such as `settings.theme`.
 
 ## Settings boundaries
 
@@ -31,12 +31,15 @@ Do not replace a user's settings file wholesale. Preserve unrelated package entr
 ## CLI commands
 
 - `install` installs the selected catalog extensions, syncs file-based entries (themes and agent config files), and repairs declared package order.
+- `install --force` removes every installed Pi extension (backing up `settings.json` first), then reinstalls the selected catalog packages and resyncs file-based entries with a backup before overwrite.
 - `status` reports installed, missing, and extra Pi extensions.
 - `update` delegates to Pi's overall update command; it does not select one extension.
 - `doctor` checks Node, npm, git, Pi, settings, catalog order, and auth.
 - `remove` removes a catalog id or raw Pi source.
 
 Use `pi update <source>` when updating one extension directly.
+
+`--force` also skips the interactive picker, so `npx @moguw/lazypi --force` removes all installed extensions (backed up first) and reinstalls the full catalog. Combine it with `--only` or `--except` to limit the selection.
 
 ## Testing
 

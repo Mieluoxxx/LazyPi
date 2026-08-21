@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -65,4 +65,18 @@ test("update delegates to pi update without installing the full catalog", () => 
 	const calls = readFileSync(callsPath, "utf8").trim().split(/\r?\n/).filter(Boolean);
 	assert.deepEqual(calls, ["update"]);
 	assert.doesNotMatch(calls.join("\n"), /install|npm:pi-mcp-adapter|npm:pi-web-access|npm:@devkade\/pi-plan/);
+});
+
+test("-v and --version print the package version", () => {
+	const { root, home, workspace, bin } = createWorkspace();
+	const callsPath = join(root, "pi-calls.log");
+	writeFakePi(bin, callsPath);
+
+	for (const flag of ["-v", "--version"]) {
+		const result = runCli([flag], { cwd: workspace, home, bin });
+		assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
+		assert.match(result.stdout.trim(), /^\d+\.\d+\.\d+$/);
+	}
+	// version output must not touch pi
+	assert.equal(existsSync(callsPath), false);
 });

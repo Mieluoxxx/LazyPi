@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, posix, resolve, win32 } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { resolveAgentConfigDir } from "../bin/lazypi.mjs";
+import { PACKAGES, resolveAgentConfigDir } from "../bin/lazypi.mjs";
 
 const CLI_PATH = resolve("bin/lazypi.mjs");
 const AUTH_ENV_VARS = [
@@ -152,4 +152,29 @@ test("--local settings remain independent of PI_CODING_AGENT_DIR", (t) => {
 	assert.ok(result.stdout.includes(`Settings file: ${realpathSync(join(workspace, ".pi", "settings.json"))}`));
 	assert.match(result.stdout, /✓ \[core\] mcp/);
 	assert.doesNotMatch(result.stdout, /✓ \[core\] subagents/);
+});
+
+test("--force removes installed extensions then reinstalls the catalog", (t) => {
+	const { root, home, workspace, bin } = createWorkspace(t);
+	const agentDir = join(home, ".pi", "agent");
+	const callsPath = join(root, "pi-calls.log");
+	writeFakePi(bin);
+	writeSettings(agentDir, ["npm:pi-mcp-adapter", "npm:pi-simplify", "npm:extra-not-in-catalog"]);
+
+	const result = runCli(["--force"], { cwd: workspace, home, agentDir, bin, callsPath });
+
+	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
+	const calls = readFileSync(callsPath, "utf8").trim().split(/\r?\n/).filter(Boolean);
+	// 1) every installed extension is removed first, catalog entries and extras alike
+	assert.deepEqual(calls.slice(0, 3), [
+		"remove npm:pi-mcp-adapter",
+		"remove npm:pi-simplify",
+		"remove npm:extra-not-in-catalog",
+	]);
+	// 2) then the whole catalog is reinstalled in catalog order (file entries excluded)
+	const expectedInstalls = PACKAGES.filter((pkg) => typeof pkg.source === "string").map((pkg) => `install ${pkg.source}`);
+	assert.deepEqual(calls.slice(3), expectedInstalls);
+	// 3) settings.json was backed up before the wipe
+	const backups = readdirSync(agentDir).filter((name) => name.startsWith("settings.json.lazypi.") && name.endsWith(".bak"));
+	assert.equal(backups.length, 1);
 });

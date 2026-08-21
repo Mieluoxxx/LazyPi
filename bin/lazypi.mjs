@@ -23,34 +23,34 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "Web search and page fetch", hint: "Built-in web search and URL fetching.", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
-	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP server integration", hint: "Connect Pi to any MCP-compatible tool server." },
-	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "Sub-agent execution", hint: "Run isolated sub-agents for parallel work." },
-	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "Second-opinion reviewer", hint: "Escalate to a stronger reviewer model for a plan, correction, or stop signal." },
-	{ id: "workspace-history", category: "core", source: "npm:pi-workspace-history", description: "Workspace history", hint: "Track and revisit workspace session history." },
-	{ id: "goal", category: "core", source: "npm:@narumitw/pi-goal", description: "Goal tracking", hint: "Track goals across Pi sessions." },
-	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "Vision support", hint: "Add image-aware capabilities to Pi." },
+	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "网页搜索与页面抓取", hint: "为 Pi 提供 WebSearch 和 WebFetch 能力", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
+	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP 服务器接入", hint: "将 Pi 接入任何兼容 MCP 的工具服务器。" },
+	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "子代理调度", hint: "为任务派生独立的 Pi 子进程作为子代理，上下文隔离，支持并行与后台运行。" },
+	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "强模型顾问", hint: "随时向更强的模型请求顾问意见，取回计划、纠错或停止信号。" },
+	{ id: "workspace-history", category: "core", source: "npm:pi-workspace-history", description: "工作区回溯", hint: "回滚的不只是聊天记录——导航历史时同步恢复工作区文件，支持 /undo、/redo 与 /tree。" },
+	{ id: "goal", category: "core", source: "npm:@narumitw/pi-goal", description: "长期目标模式", hint: "用 /goal 设定目标，Pi 跨回合自主推进直至完成，支持暂停、恢复与队列。" },
+	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "视觉能力", hint: "按主模型能力自动路由：多模态直读图片，纯文本模型才委托视觉模型分析。" },
 	// ui
-	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "Terminal user interface", hint: "Add a richer terminal UI for Pi workflows." },
-	{ id: "tool-display", category: "ui", source: "npm:@moguw/pi-tool-display", description: "Tool result display", hint: "Customize how Pi tool results are presented.", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
+	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "终端界面美化", hint: "Opencode 风格编辑框与消息样式，Starship 风格状态栏，四类界面元素独立配置。" },
+	{ id: "tool-display", category: "ui", source: "npm:@moguw/pi-tool-display", description: "工具输出渲染", hint: "紧凑渲染工具调用与 diff，自动折叠截断冗长输出，让终端更清爽。", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
 	// tools
-	{ id: "interactive-shell", category: "tools", source: "npm:@moguw/pi-interactive-shell", description: "Interactive shell overlays", hint: "Run long-running CLIs and terminal workflows in observable overlays." },
-	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "Hashline editing", hint: "Add hash-anchored read and edit output." },
-	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "FFF workflow", hint: "Add the FFF workflow to Pi." },
-	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "Code simplify review", hint: "Reviews recently changed code for clarity and maintainability." },
-	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff review and annotation", hint: "Walk the diff, annotate changes, and send feedback to the agent." },
-	{ id: "ponytail", category: "tools", source: "git:github.com/DietrichGebert/ponytail@v4.9.0", description: "Minimal coding guidance", hint: "Favor YAGNI, existing code, and the smallest correct implementation." },
+	{ id: "interactive-shell", category: "tools", source: "npm:@moguw/pi-interactive-shell", description: "交互式 Shell 覆盖层", hint: "在可观察的覆盖层中运行长时间 CLI 与终端工作流。" },
+	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "哈希锚点编辑", hint: "用行级哈希锚点做精确的读取与编辑。" },
+	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "模糊文件搜索", hint: "基于 FFF 的模糊文件与内容搜索，快速定位文件和代码。" },
+	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "代码简化审查", hint: "审查最近改动的代码，追求清晰、一致与可维护。" },
+	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff 审查标注", hint: "在终端里逐块走查 diff 并标注，把审查意见发回给 agent 继续处理。" },
+	{ id: "ponytail", category: "tools", source: "git:github.com/DietrichGebert/ponytail@v4.9.0", description: "极简编码准则", hint: "懒惰资深工程师模式：能不写的代码就不写，优先复用现有实现，保持安全底线。" },
 	// herdr
-	{ id: "session-rename", category: "herdr", source: "npm:@moguw/pi-session-rename", description: "Session auto-naming", hint: "Auto-name Pi sessions from conversation context; manage with /rename." },
-	{ id: "session-migrate", category: "herdr", source: "npm:@moguw/pi-session-migrate", description: "Session migration", hint: "Migrate Pi sessions after a project moves to a new path; run /migrate." },
-	{ id: "session-fork", category: "herdr", source: "npm:@moguw/pi-session-fork", description: "Session forking", hint: "Fork sessions into Herdr panes or tabs, or ask inline and outline side questions with /btw." },
+	{ id: "session-rename", category: "herdr", source: "npm:@moguw/pi-session-rename", description: "会话自动命名", hint: "根据对话上下文自动给会话起名，/rename 随时手动管理。" },
+	{ id: "session-migrate", category: "herdr", source: "npm:@moguw/pi-session-migrate", description: "会话迁移", hint: "项目挪路径后找回遗留会话，改写 cwd 迁入新位置，用 /migrate 执行。" },
+	{ id: "session-fork", category: "herdr", source: "npm:@moguw/pi-session-fork", description: "会话分叉", hint: "把当前会话分叉到 Herdr 窗格或标签页，/btw 内联或旁路追问。" },
 	// codex
-	{ id: "apply-patch", category: "codex", source: "git:github.com/code-yeongyu/pi-apply-patch", description: "Codex-style patch editing", hint: "Adds the Codex apply_patch tool; replaces write/edit while a GPT model is active." },
+	{ id: "apply-patch", category: "codex", source: "git:github.com/code-yeongyu/pi-apply-patch", description: "Codex 补丁编辑", hint: "注册 Codex 的 apply_patch 工具，GPT 模型激活时替代 write/edit，支持增删改移。" },
 	// themes
-	{ id: "vesper-dark", category: "themes", themeFiles: ["themes/vesper-dark.json"], description: "Vesper dark theme", hint: "Warm peach-and-mint dark theme; set settings.theme to \"vesper-dark\" to activate." },
-	{ id: "vesper-light", category: "themes", themeFiles: ["themes/vesper-light.json"], description: "Vesper light theme", hint: "Light variant of the Vesper theme; set settings.theme to \"vesper-light\" to activate." },
+	{ id: "vesper-dark", category: "themes", themeFiles: ["themes/vesper-dark.json"], description: "Vesper 暗色主题", hint: "暖桃与薄荷色调的近黑暗色主题；将 settings.theme 设为 \"vesper-dark\" 启用。" },
+	{ id: "vesper-light", category: "themes", themeFiles: ["themes/vesper-light.json"], description: "Vesper 亮色主题", hint: "暖米色底的亮色变体，桃色强调、薄荷点缀；将 settings.theme 设为 \"vesper-light\" 启用。" },
 	// config
-	{ id: "global-agents", category: "config", agentFiles: ["agent/AGENTS.md"], description: "Global AGENTS.md", hint: "Installs the agent personality/config file to ~/.pi/agent/AGENTS.md (backed up before overwrite)." },
+	{ id: "global-agents", category: "config", agentFiles: ["agent/AGENTS.md"], description: "全局 AGENTS.md", hint: "安装全局 agent 配置文件到 ~/.pi/agent/AGENTS.md，覆盖前自动备份。" },
 ];
 const CATEGORIES = [...new Set(PACKAGES.map((pkg) => pkg.category))];
 
@@ -121,6 +121,13 @@ const PACKAGE_COMMAND = `npx ${(() => {
 		return "lazypi";
 	}
 })()}`;
+function packageVersion() {
+	try {
+		return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || "0.0.0";
+	} catch {
+		return "0.0.0";
+	}
+}
 function printHeader(text) {
 	console.log(`\n${bold(text)}`);
 }
@@ -155,7 +162,9 @@ function parseArgs(args) {
 		command: "install",
 		local: false,
 		yes: false,
+		force: false,
 		help: false,
+		version: false,
 		only: null,
 		except: null,
 		targets: [],
@@ -171,6 +180,8 @@ function parseArgs(args) {
 		const arg = args[i];
 		if (arg === "-l" || arg === "--local") flags.local = true;
 		else if (arg === "-y" || arg === "--yes") flags.yes = true;
+		else if (arg === "--force") flags.force = true;
+		else if (arg === "-v" || arg === "--version") flags.version = true;
 		else if (arg === "-h" || arg === "--help") flags.help = true;
 		else if (arg === "--only") flags.only = parseList(args[++i]);
 		else if (arg.startsWith("--only=")) flags.only = parseList(arg.slice("--only=".length));
@@ -258,14 +269,17 @@ ${bold("Commands:")}
 ${bold("Install options:")}
   --only <list>       Install only the given categories or extension ids
   --except <list>     Install everything except the given categories or ids
-  -l, --local         Install into the current project (.pi/settings.json)
-  -y, --yes           Skip interactive selection and confirmation prompts
-  -h, --help          Show this help
+	-l, --local         Install into the current project (.pi/settings.json)
+	-y, --yes           Skip interactive selection and confirmation prompts
+	--force             Remove all installed Pi extensions, then reinstall the catalog
+	-v, --version       Show the current version
+	-h, --help          Show this help
 
 ${bold("Default behaviour:")}
   - Every catalog extension is installed by default.
   - On a TTY, choose everything or review packages one by one with recommendation reasons.
-  - With --yes, --only, or --except interactive selection is skipped.
+  - With --yes, --force, --only, or --except interactive selection is skipped.
+  - --force removes every installed Pi extension (settings backed up first), then reinstalls the selected catalog; file entries are resynced with a backup before overwrite.
   - update does not filter one extension; use pi update <source> for that.
 
 ${bold("Categories:")}
@@ -274,6 +288,7 @@ ${CATEGORIES.map((category) => `  ${category}`).join("\n")}
 ${bold("Examples:")}
   ${PACKAGE_COMMAND}                              # everything
   ${PACKAGE_COMMAND} --yes                        # everything, no prompt
+  ${PACKAGE_COMMAND} --force                      # force reinstall everything
   ${PACKAGE_COMMAND} --only core                  # core extensions
   ${PACKAGE_COMMAND} --only subagents,mcp         # selected extensions
   ${PACKAGE_COMMAND} --only core --local          # project-local install
@@ -448,7 +463,7 @@ function reportPostInstallResults(result, interactive) {
 	return true;
 }
 
-function installAgentFiles(pkg) {
+function installAgentFiles(pkg, force = false) {
 	const installed = [];
 	const missingSource = [];
 	for (const file of entryFileTargets(pkg)) {
@@ -456,7 +471,7 @@ function installAgentFiles(pkg) {
 			missingSource.push(file.name);
 			continue;
 		}
-		if (!fileNeedsSync(file)) continue;
+		if (!force && !fileNeedsSync(file)) continue;
 		mkdirSync(dirname(file.targetPath), { recursive: true });
 		let backup = null;
 		if (existsSync(file.targetPath)) {
@@ -608,6 +623,25 @@ function isPackagePresent(pkg, installedPiSources) {
 
 
 
+function clearInstalledSources(local) {
+	const { sources, path, exists } = readInstalledSources(local);
+	if (!exists || sources.size === 0) return { removed: [], failed: [], backup: null, error: null };
+	let backup = null;
+	try {
+		backup = backupPath(path);
+		copyFileSync(path, backup);
+	} catch (err) {
+		return { removed: [], failed: [], backup: null, error: err instanceof Error ? err.message : String(err) };
+	}
+	const failed = [];
+	const piArgs = local ? ["remove", "-l"] : ["remove"];
+	for (const source of sources) {
+		const status = spawnCommand("pi", [...piArgs, source], { stdio: "inherit" }).status;
+		if (status !== 0) failed.push(source);
+	}
+	return { removed: [...sources], failed, backup, error: null };
+}
+
 function runPi(args) {
 	const result = spawnCommand("pi", args, { stdio: "inherit" });
 	return result.status ?? 1;
@@ -728,7 +762,7 @@ async function ensurePi(flags) {
 	if (hasCmd("pi")) return true;
 
 	log.warn("Could not find the `pi` command on PATH.");
-	const ok = flags.yes || (await confirm("Install Pi now with `npm install -g @earendil-works/pi-coding-agent`?", true));
+	const ok = flags.yes || flags.force || (await confirm("Install Pi now with `npm install -g @earendil-works/pi-coding-agent`?", true));
 	if (!ok) {
 		log.error(`Install Pi first, then re-run ${PACKAGE_COMMAND}.`);
 		return false;
@@ -755,13 +789,24 @@ async function cmdInstall(flags) {
 	let selectedIds = expandPackageDependencies(resolveSelection(flags));
 
 	const usedSelectionFlag = Boolean(flags.only || flags.except);
-	const interactive = !flags.yes && !usedSelectionFlag && isInteractive();
+	const interactive = !flags.yes && !flags.force && !usedSelectionFlag && isInteractive();
 
 	if (interactive) {
 		console.log(renderLogo());
 		intro(bold("LazyPi"));
 	}
 	if (!(await ensurePi(flags))) return 127;
+
+	let cleared = null;
+	if (flags.force) {
+		cleared = clearInstalledSources(flags.local);
+		if (cleared.error) {
+			console.error(red(`Could not back up settings before force reinstall: ${cleared.error}`));
+		} else if (cleared.removed.length > 0) {
+			if (interactive) log.step(`Removing ${cleared.removed.length} installed Pi extension(s)…`);
+			else console.log(`\n→ Removing ${cleared.removed.length} installed Pi extension(s)…`);
+		}
+	}
 
 	if (interactive) {
 		const choice = await askLazyOrPick(PACKAGES.length);
@@ -779,12 +824,13 @@ async function cmdInstall(flags) {
 	const { sources: installedSources, error: settingsError } = readInstalledSources(flags.local);
 	if (settingsError) log.warn(`Could not parse ${settingsPath(flags.local)} — ${settingsError}`);
 
-	const toInstall = selected.filter((pkg) => (isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
+	const toInstall = selected.filter((pkg) => flags.force || (isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
 	const alreadyInstalled = selected.filter((pkg) => !(isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
 	const scope = flags.local ? "project (.pi/settings.json)" : `global (${settingsPath(false)})`;
 	const summary = [
 		`Target:            ${scope}`,
 		`Selected:          ${selected.length}/${PACKAGES.length}`,
+		...(flags.force ? ["Mode:              force reinstall"] : []),
 		`Already installed: ${alreadyInstalled.length}`,
 		`Will install:      ${toInstall.length}`,
 		`Pi credentials:    ${formatAuthSummary(detectAuth())}`,
@@ -810,7 +856,7 @@ async function cmdInstall(flags) {
 			const action = pkg.category === "themes" ? `install theme ${pkg.id}` : `install agent file ${pkg.id}`;
 			if (interactive) log.step(action);
 			else console.log(`\n→ ${action}`);
-			const themeResult = installAgentFiles(pkg);
+			const themeResult = installAgentFiles(pkg, flags.force);
 			if (!themeResult.ok) {
 				failed.push(pkg);
 				if (interactive) log.error(`failed to install ${pkg.id}`);
@@ -839,7 +885,8 @@ async function cmdInstall(flags) {
 	const failedIds = new Set(failed.map((pkg) => pkg.id));
 	const postInstall = runSelectedPostInstalls(selected, flags.local, failedIds);
 	const postInstallOk = reportPostInstallResults(postInstall, interactive);
-	if (failed.length === 0) {
+	const clearFailures = cleared && cleared.failed.length > 0 ? cleared.failed : [];
+	if (failed.length === 0 && clearFailures.length === 0) {
 		if (!postInstallOk) return 1;
 		printCheatsheet(selected, interactive);
 		printNextSteps(detectAuth(), installedCount, interactive);
@@ -847,12 +894,15 @@ async function cmdInstall(flags) {
 	}
 
 	const failureList = failed.map((p) => `- ${p.id} (${isFileInstall(p) ? fileInstallLabel(p) : p.source})`).join("\n");
+	const clearFailureList = clearFailures.map((s) => `- ${s}`).join("\n");
+	const totalFailures = failed.length + clearFailures.length;
 	if (interactive) {
-		note(failureList, "Failures");
-		outro(red(`Finished with ${failed.length} failure(s).`));
+		note([failureList, clearFailureList].filter(Boolean).join("\n"), "Failures");
+		outro(red(`Finished with ${totalFailures} failure(s).`));
 	} else {
-		console.error(red(`\nLazyPi finished with ${failed.length} failure(s):`));
-		console.error(failureList);
+		console.error(red(`\nLazyPi finished with ${totalFailures} failure(s):`));
+		if (failureList) console.error(failureList);
+		if (clearFailureList) console.error(red(`Failed to remove:\n${clearFailureList}`));
 	}
 	return 1;
 }
@@ -1074,6 +1124,10 @@ async function main() {
 	const flags = parseArgs(argv.slice(2));
 	if (flags.help) {
 		printHelp();
+		return 0;
+	}
+	if (flags.version) {
+		console.log(packageVersion());
 		return 0;
 	}
 	switch (flags.command) {
