@@ -91,7 +91,7 @@ test("resolveAgentConfigDir matches Pi path semantics", () => {
 test("status reads settings from PI_CODING_AGENT_DIR", (t) => {
 	const { home, workspace } = createWorkspace(t);
 	const customAgentDir = join(home, ".pi", "lazy");
-	writeSettings(join(home, ".pi", "agent"), ["npm:pi-mcp-adapter"]);
+	writeSettings(join(home, ".pi", "agent"), ["npm:@juicesharp/rpiv-advisor"]);
 	writeSettings(customAgentDir, ["npm:pi-subagents"]);
 
 	const result = runCli(["status"], { cwd: workspace, home, agentDir: "~/.pi/lazy" });
@@ -99,7 +99,7 @@ test("status reads settings from PI_CODING_AGENT_DIR", (t) => {
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.ok(result.stdout.includes(`Settings file: ${join(customAgentDir, "settings.json")}`));
 	assert.match(result.stdout, /✓ \[core\] subagents/);
-	assert.doesNotMatch(result.stdout, /✓ \[core\] mcp/);
+	assert.doesNotMatch(result.stdout, /✓ \[core\] advisor/);
 });
 
 test("install reads auth and uses the custom global settings", (t) => {
@@ -144,13 +144,13 @@ test("--local settings remain independent of PI_CODING_AGENT_DIR", (t) => {
 	const { home, workspace } = createWorkspace(t);
 	const customAgentDir = join(home, ".pi", "lazy");
 	writeSettings(customAgentDir, ["npm:pi-subagents"]);
-	writeSettings(join(workspace, ".pi"), ["npm:pi-mcp-adapter"]);
+	writeSettings(join(workspace, ".pi"), ["npm:@juicesharp/rpiv-advisor"]);
 
 	const result = runCli(["status", "--local"], { cwd: workspace, home, agentDir: customAgentDir });
 
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.ok(result.stdout.includes(`Settings file: ${realpathSync(join(workspace, ".pi", "settings.json"))}`));
-	assert.match(result.stdout, /✓ \[core\] mcp/);
+	assert.match(result.stdout, /✓ \[core\] advisor/);
 	assert.doesNotMatch(result.stdout, /✓ \[core\] subagents/);
 });
 

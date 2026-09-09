@@ -90,19 +90,19 @@ test("selecting only one package does not run its post-install rule", (t) => {
 test("a package installation failure does not write compatibility config", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
-	const result = installBoth({ ...state, failSource: "npm:pi-hashline-edit-pro" });
+	const result = installBoth({ ...state, failSource: "npm:@moguw/pi-hashline-edit-pro" });
 	assert.equal(result.status, 1, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.equal(existsSync(globalConfigPath(state.agentDir)), false);
 });
 test("an unrelated package failure does not suppress successful compatibility post-processing", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
-	const result = runCli(["--yes", "--only", "tool-display,hashline-edit-pro,mcp"], { ...state, failSource: "npm:pi-mcp-adapter" });
+	const result = runCli(["--yes", "--only", "tool-display,hashline-edit-pro,advisor"], { ...state, failSource: "npm:@juicesharp/rpiv-advisor" });
 	assert.equal(result.status, 1, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.deepEqual(JSON.parse(readFileSync(globalConfigPath(state.agentDir), "utf8")), {
 		registerToolOverrides: { read: false },
 	});
-	assert.match(`${result.stdout}\n${result.stderr}`, /failed to install mcp/);
+	assert.match(`${result.stdout}\n${result.stderr}`, /failed to install advisor/);
 });
 
 
@@ -179,7 +179,7 @@ test("local installation writes compatibility config under the project .pi root"
 test("same-run selection reconciles before the already-installed early return", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
-	writeSettings(state.agentDir, ["npm:@moguw/pi-tool-display", "npm:pi-hashline-edit-pro"]);
+	writeSettings(state.agentDir, ["npm:@moguw/pi-tool-display", "npm:@moguw/pi-hashline-edit-pro"]);
 	const callsPath = join(state.root, "pi-calls.log");
 	const result = installBoth({ ...state, callsPath });
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
@@ -187,4 +187,31 @@ test("same-run selection reconciles before the already-installed early return", 
 		registerToolOverrides: { read: false },
 	});
 	assert.equal(existsSync(callsPath), false);
+});
+
+test("install prints recommended setup commands for selected packages", (t) => {
+	const state = createWorkspace(t);
+	writeFakePi(state.bin);
+	const result = runCli(["--yes", "--only", "fff"], state);
+	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\n${result.stderr}`);
+	assert.match(result.stdout, /Recommended setup commands/);
+	assert.match(result.stdout, /fff — add to your shell profile:/);
+	assert.match(result.stdout, /export PI_FFF_MODE=override/);
+});
+
+test("new UI packages install from npm and skip already-installed sources", (t) => {
+	const state = createWorkspace(t);
+	writeFakePi(state.bin);
+	const callsPath = join(state.root, "pi-calls.log");
+	const sources = ["npm:@monotykamary/pi-tps", "npm:@lanlance/pi-recap"];
+	const args = ["--yes", "--only", "tps,recap"];
+	const first = runCli(args, { ...state, callsPath });
+	assert.equal(first.status, 0, `STDOUT:\n${first.stdout}\nSTDERR:\n${first.stderr}`);
+	const calls = readFileSync(callsPath, "utf8");
+	assert.deepEqual(calls.trim().split(/\r?\n/), sources.map((source) => `install ${source}`));
+	writeSettings(state.agentDir, sources);
+	const second = runCli(args, { ...state, callsPath });
+	assert.equal(second.status, 0, `STDOUT:\n${second.stdout}\nSTDERR:\n${second.stderr}`);
+	assert.equal(readFileSync(callsPath, "utf8"), calls);
+	assert.equal(existsSync(globalConfigPath(state.agentDir)), false);
 });

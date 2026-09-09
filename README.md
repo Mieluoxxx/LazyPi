@@ -28,12 +28,34 @@ Select what gets installed:
 
 ```bash
 npx @moguw/lazypi --only core              # only a category
-npx @moguw/lazypi --only subagents,mcp     # only specific extension ids
+npx @moguw/lazypi --only subagents,advisor # only specific extension ids
 npx @moguw/lazypi --except tools           # everything but a category
 npx @moguw/lazypi --local                  # install into .pi/settings.json of the current project
 ```
 
 `update` does not update a single extension — for that use Pi directly: `pi update <source>`.
+
+### Portable package sources
+
+The seven [pi-ext](https://github.com/Mieluoxxx/pi-ext) extensions use their published `@moguw` npm packages, not machine-specific checkout paths. Sources remain unpinned, like the rest of the npm catalog.
+
+| Catalog id | Category | Pi install source |
+| --- | --- | --- |
+| `web-access` | `core` | `npm:@moguw/pi-web-access` |
+| `tool-display` | `ui` | `npm:@moguw/pi-tool-display` |
+| `interactive-shell` | `tools` | `npm:@moguw/pi-interactive-shell` |
+| `hashline-edit-pro` | `tools` | `npm:@moguw/pi-hashline-edit-pro` |
+| `session-rename` | `herdr` | `npm:@moguw/pi-session-rename` |
+| `session-migrate` | `herdr` | `npm:@moguw/pi-session-migrate` |
+| `session-fork` | `herdr` | `npm:@moguw/pi-session-fork` |
+| `tps` | `ui` | `npm:@monotykamary/pi-tps` |
+| `recap` | `ui` | `npm:@lanlance/pi-recap` |
+
+[TPS](https://github.com/monotykamary/pi-tps) shows turn speed, time to first token, token usage, and available cost data; `/tps-export` exports telemetry. [Recap](https://github.com/L2ncE/pi-recap) keeps the session goal and progress visible; `/recap` refreshes it using the configured or current session model, making additional model requests. Neither entry adds special install configuration.
+
+Catalog updates do **not** migrate existing local-path or legacy unscoped registrations. LazyPi matches exact sources, so installing an npm source alongside a local checkout of the same extension can load both. Migrate those registrations explicitly when ready; this catalog update does not change your live Pi settings. `simplify` and the theme/agent-file entries remain in the catalog even when absent from a machine's `pi list`.
+
+**Existing Web Access configuration limitation:** its post-install merge targets `../web-search.json` relative to the install root. This matches the default global `~/.pi/web-search.json`, but not the extension's configuration lookup when `PI_CODING_AGENT_DIR`, `XDG_CONFIG_HOME`, or `--local` is used. For those setups, check the configuration location documented by the extension; this catalog update does not relocate configuration files or change that existing rule.
 
 ## Build your own LazyPi
 
@@ -83,6 +105,7 @@ Categories are derived automatically from the `category` values, so adding a new
 #### Advanced fields
 
 - `dependencies: ["other-id"]` — package ids automatically selected whenever this package is selected.
+- `setupCommands: ["export ..."]` — recommended commands printed after install for the selected packages.
 - `loadBefore: ["other-id"]` — packages this one must load before; `install` repairs the package order in existing settings to match.
 - `postInstall: [{ requiresSelected: ["other-id"], jsonMerge: { path: "extensions/.../config.json", value: { ... } } }]` — a JSON merge applied after install, but only when every id in `requiresSelected` is selected in the same invocation. Unrelated configuration is preserved.
 - File-based entries replace `source` with `themeFiles` and/or `agentFiles`:

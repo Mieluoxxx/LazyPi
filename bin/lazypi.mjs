@@ -23,8 +23,7 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:pi-web-access", description: "网页搜索与页面抓取", hint: "为 Pi 提供 WebSearch 和 WebFetch 能力", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
-	{ id: "mcp", category: "core", source: "npm:pi-mcp-adapter", description: "MCP 服务器接入", hint: "将 Pi 接入任何兼容 MCP 的工具服务器。" },
+	{ id: "web-access", category: "core", source: "npm:@moguw/pi-web-access", description: "网页搜索与页面抓取", hint: "为 Pi 提供 WebSearch 和 WebFetch 能力", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
 	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "子代理调度", hint: "为任务派生独立的 Pi 子进程作为子代理，上下文隔离，支持并行与后台运行。" },
 	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "强模型顾问", hint: "随时向更强的模型请求顾问意见，取回计划、纠错或停止信号。" },
 	{ id: "workspace-history", category: "core", source: "npm:pi-workspace-history", description: "工作区回溯", hint: "回滚的不只是聊天记录——导航历史时同步恢复工作区文件，支持 /undo、/redo 与 /tree。" },
@@ -33,13 +32,16 @@ export const PACKAGES = [
 	// ui
 	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "终端界面美化", hint: "Opencode 风格编辑框与消息样式，Starship 风格状态栏，四类界面元素独立配置。" },
 	{ id: "tool-display", category: "ui", source: "npm:@moguw/pi-tool-display", description: "工具输出渲染", hint: "紧凑渲染工具调用与 diff，自动折叠截断冗长输出，让终端更清爽。", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
+	{ id: "tps", category: "ui", source: "npm:@monotykamary/pi-tps", description: "生成速度与用量统计", hint: "每轮显示生成速度、首 Token 延迟、Token 用量与可用费用统计，/tps-export 导出数据。" },
+	{ id: "recap", category: "ui", source: "npm:@lanlance/pi-recap", description: "会话目标与进展摘要", hint: "用配置或当前会话模型生成状态摘要，/recap 手动刷新；会产生额外模型调用。" },
 	// tools
 	{ id: "interactive-shell", category: "tools", source: "npm:@moguw/pi-interactive-shell", description: "交互式 Shell 覆盖层", hint: "在可观察的覆盖层中运行长时间 CLI 与终端工作流。" },
-	{ id: "hashline-edit-pro", category: "tools", source: "npm:pi-hashline-edit-pro", description: "哈希锚点编辑", hint: "用行级哈希锚点做精确的读取与编辑。" },
-	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "模糊文件搜索", hint: "基于 FFF 的模糊文件与内容搜索，快速定位文件和代码。" },
+	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "模糊文件搜索", hint: "基于 FFF 的模糊文件与内容搜索，快速定位文件和代码。", setupCommands: ["export PI_FFF_MODE=override"], loadBefore: ["hashline-edit-pro"] },
+	{ id: "hashline-edit-pro", category: "tools", source: "npm:@moguw/pi-hashline-edit-pro", description: "哈希锚点编辑", hint: "用行级哈希锚点做精确的读取与编辑。" },
+	{ id: "codegraph", category: "tools", source: "npm:@estebanforge/pi-codegraph-enhanced", description: "代码结构导航", hint: "基于 Tree-sitter 索引的符号搜索、调用链与影响面分析，启动时自动建索引并同步。需全局安装 @colbymchenry/codegraph CLI。" },
 	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "代码简化审查", hint: "审查最近改动的代码，追求清晰、一致与可维护。" },
-	{ id: "slopchop", category: "tools", source: "npm:pi-slopchop", description: "Diff 审查标注", hint: "在终端里逐块走查 diff 并标注，把审查意见发回给 agent 继续处理。" },
 	{ id: "ponytail", category: "tools", source: "git:github.com/DietrichGebert/ponytail@v4.9.0", description: "极简编码准则", hint: "懒惰资深工程师模式：能不写的代码就不写，优先复用现有实现，保持安全底线。" },
+	{ id: "context7", category: "tools", source: "npm:@upstash/context7-pi", description: "最新库文档查询", hint: "通过 Context7 拉取任意库的最新文档与代码示例，训练数据过期时优先查询。可选 export CONTEXT7_API_KEY 提升配额。" },
 	// herdr
 	{ id: "session-rename", category: "herdr", source: "npm:@moguw/pi-session-rename", description: "会话自动命名", hint: "根据对话上下文自动给会话起名，/rename 随时手动管理。" },
 	{ id: "session-migrate", category: "herdr", source: "npm:@moguw/pi-session-migrate", description: "会话迁移", hint: "项目挪路径后找回遗留会话，改写 cwd 迁入新位置，用 /migrate 执行。" },
@@ -290,7 +292,7 @@ ${bold("Examples:")}
   ${PACKAGE_COMMAND} --yes                        # everything, no prompt
   ${PACKAGE_COMMAND} --force                      # force reinstall everything
   ${PACKAGE_COMMAND} --only core                  # core extensions
-  ${PACKAGE_COMMAND} --only subagents,mcp         # selected extensions
+  ${PACKAGE_COMMAND} --only subagents,advisor     # selected extensions
   ${PACKAGE_COMMAND} --only core --local          # project-local install
   ${PACKAGE_COMMAND} status
   ${PACKAGE_COMMAND} doctor`);
@@ -842,6 +844,7 @@ async function cmdInstall(flags) {
 		const postInstall = runSelectedPostInstalls(selected, flags.local);
 		if (!reportPostInstallResults(postInstall, interactive)) return 1;
 		printCheatsheet(selected, interactive);
+		printSetupCommands(selected, interactive);
 		const done = "Nothing to do — every selected package is already installed.";
 		if (interactive) log.success(green(done));
 		else console.log(green(done));
@@ -889,6 +892,7 @@ async function cmdInstall(flags) {
 	if (failed.length === 0 && clearFailures.length === 0) {
 		if (!postInstallOk) return 1;
 		printCheatsheet(selected, interactive);
+		printSetupCommands(selected, interactive);
 		printNextSteps(detectAuth(), installedCount, interactive);
 		return 0;
 	}
@@ -905,6 +909,22 @@ async function cmdInstall(flags) {
 		if (clearFailureList) console.error(red(`Failed to remove:\n${clearFailureList}`));
 	}
 	return 1;
+}
+
+function printSetupCommands(selected, interactive) {
+	const lines = [];
+	for (const pkg of selected) {
+		for (const command of pkg.setupCommands ?? []) {
+			lines.push(`${pkg.id} — add to your shell profile:`);
+			lines.push(`  ${command}`);
+		}
+	}
+	if (lines.length === 0) return;
+	if (interactive) note(lines.join("\n"), "Recommended setup commands");
+	else {
+		printHeader("Recommended setup commands:");
+		for (const line of lines) console.log(line);
+	}
 }
 
 function printNextSteps(state, installedCount, interactive) {

@@ -9,6 +9,25 @@ test("expectedPackageSources matches the full catalog", () => {
 	assert.deepEqual(expected, PACKAGES.filter((pkg) => typeof pkg.source === "string").map((pkg) => pkg.source));
 });
 
+test("pi-ext catalog entries use the published moguw sources", () => {
+	const expected = expectedPackageSources();
+	for (const id of ["web-access", "hashline-edit-pro", "interactive-shell", "tool-display", "session-rename", "session-migrate", "session-fork"]) {
+		const source = `npm:@moguw/pi-${id}`;
+		assert.equal(PACKAGES.find((pkg) => pkg.id === id)?.source, source);
+		assert.ok(expected.includes(source));
+	}
+});
+
+test("turn telemetry and session recap are included as UI packages", () => {
+	const expected = expectedPackageSources();
+	for (const [id, source] of [["tps", "npm:@monotykamary/pi-tps"], ["recap", "npm:@lanlance/pi-recap"]]) {
+		const pkg = PACKAGES.find((entry) => entry.id === id);
+		assert.equal(pkg?.category, "ui");
+		assert.equal(pkg.source, source);
+		assert.ok(expected.includes(source));
+	}
+});
+
 test("expectedPackageSources supports excluded package ids", () => {
 	const extensionCount = PACKAGES.filter((pkg) => typeof pkg.source === "string").length;
 	const excludedId = PACKAGES[0].id;
