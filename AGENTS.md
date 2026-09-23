@@ -18,9 +18,23 @@ Supported categories are derived automatically from the `category` values in `PA
 Each entry has an `id`, `category`, `description`, and `hint`. Extension entries also declare a `source` (npm or Git Pi install source); file-based entries declare `themeFiles` and/or `agentFiles` instead. Optional `dependencies`, `loadBefore`, and `postInstall` fields express catalog relationships and selected-install configuration; `setupCommands` lists recommended commands printed after install for selected packages. Keep entries ordered by category and use the repository's existing formatting.
 Catalog load-order metadata is applied to existing settings without discarding unrelated packages or fields. A timestamped backup is created before a settings file is rewritten.
 
+The extension set follows the approved 17-extension `pi list` snapshot, with local pi-ext checkouts represented by npm sources. Keep the three file-based entries separately. `conflicts` lists known incompatible legacy sources (including pinned forms); install rejects conflicts instead of silently uninstalling user packages. Tool providers must precede `lazy-tools` via `loadBefore` metadata.
+
 Selected-package `postInstall` JSON merges run only when their required package ids are selected in the same LazyPi install invocation. They preserve unrelated configuration and create a timestamped backup before changing an existing file.
 
 File-based catalog entries ship JSON files installed into Pi's agent directory: `themes` entries copy from `themes/` into the agent themes directory; `config` entries with `agentFiles` (for example `agent/AGENTS.md`) copy to the agent root. An existing file is backed up with a timestamped `.lazypi.<timestamp>.bak` before being overwritten; identical files are skipped unless `--force` is used. These installs never modify settings such as `settings.theme`.
+
+## Configuration presets
+
+Opt-in presets live under `presets/{base,ui,workflow}/`; each `preset.json` declares catalog package ids and explicit configuration files. `lib/presets.mjs` loads and validates manifests, combines ordered preferences with catalog files/compatibility rules, and plans/backs up writes. Keep configuration payloads in files rather than adding personal preferences to `PACKAGES.postInstall`.
+
+Repeated `--preset <name|manifest-path>` applies later values over earlier ones. With presets, only their requirements plus additional `--only` selections are installed; `--except` cannot exclude requirements. `--local` and `--force` are rejected. `install --dry-run` requires presets and must perform no writes or installs; `status --preset` reuses the same plan and returns nonzero for drift/missing packages.
+
+Presets support object `merge`, whole-file `copy`, and `merge-models` exclusively for the canonical `agent/models.json` target. Model providers merge by name, model entries by exact id; preserve unrelated models, fields and credentials, reject duplicate ids/invalid collection shapes, and track drift/concurrency by id rather than array position. Only model mode accepts Pi-style line comments/trailing commas; no credential commands or environment interpolation are executed by LazyPi. Ordinary arrays replace by value and must remain idempotent. Resource/trust/runtime fields in settings are protected; auth, trust, state and executable files are not preset targets. Preserve package filter objects. Paths are confined and symlinks/casing aliases must not bypass protection. Use the Web Access target resolver instead of `../` paths.
+
+Preset install tests must isolate HOME and `PI_CODING_AGENT_DIR`. The packed smoke must execute actual preset application from the npm artifact. Never copy private presets, secrets or backups into published directories.
+
+Do not read or copy the maintainer's `models.json` to build catalog presets. No built-in CPA/model preset is shipped; generic model-merge tests use synthetic fixtures only.
 
 ## Settings boundaries
 

@@ -97,7 +97,7 @@ test("a package installation failure does not write compatibility config", (t) =
 test("an unrelated package failure does not suppress successful compatibility post-processing", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
-	const result = runCli(["--yes", "--only", "tool-display,hashline-edit-pro,advisor"], { ...state, failSource: "npm:@juicesharp/rpiv-advisor" });
+	const result = runCli(["--yes", "--only", "tool-display,hashline-edit-pro,advisor"], { ...state, failSource: "npm:pi-omp-advisor" });
 	assert.equal(result.status, 1, `STDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
 	assert.deepEqual(JSON.parse(readFileSync(globalConfigPath(state.agentDir), "utf8")), {
 		registerToolOverrides: { read: false },
@@ -189,22 +189,21 @@ test("same-run selection reconciles before the already-installed early return", 
 	assert.equal(existsSync(callsPath), false);
 });
 
-test("install prints recommended setup commands for selected packages", (t) => {
+test("FFF installation no longer recommends a mode that overrides preset configuration", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
 	const result = runCli(["--yes", "--only", "fff"], state);
 	assert.equal(result.status, 0, `STDOUT:\n${result.stdout}\n${result.stderr}`);
-	assert.match(result.stdout, /Recommended setup commands/);
-	assert.match(result.stdout, /fff — add to your shell profile:/);
-	assert.match(result.stdout, /export PI_FFF_MODE=override/);
+	assert.doesNotMatch(result.stdout, /export PI_FFF_MODE=override/);
+	assert.match(result.stdout, /tools-and-ui/);
 });
 
-test("new UI packages install from npm and skip already-installed sources", (t) => {
+test("new tool packages install from npm and skip already-installed sources", (t) => {
 	const state = createWorkspace(t);
 	writeFakePi(state.bin);
 	const callsPath = join(state.root, "pi-calls.log");
-	const sources = ["npm:@monotykamary/pi-tps", "npm:@lanlance/pi-recap"];
-	const args = ["--yes", "--only", "tps,recap"];
+	const sources = ["npm:@injaneity/pi-computer-use", "npm:@moguw/pi-openai-tools"];
+	const args = ["--yes", "--only", "computer-use,openai-tools"];
 	const first = runCli(args, { ...state, callsPath });
 	assert.equal(first.status, 0, `STDOUT:\n${first.stdout}\nSTDERR:\n${first.stderr}`);
 	const calls = readFileSync(callsPath, "utf8");

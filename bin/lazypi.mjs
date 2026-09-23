@@ -5,6 +5,7 @@ import { basename, dirname, join, posix, resolve, win32 } from "node:path";
 import { spawnSync } from "node:child_process";
 import { argv, cwd, exit, stdout, stderr } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { applyConfiguration, loadPresets, mergeJsonObjects, planConfiguration } from "../lib/presets.mjs";
 import {
 	cancel as clackCancel,
 	confirm as clackConfirm,
@@ -23,31 +24,27 @@ import {
 // Customize this array; it is the only extension catalog used by the CLI.
 export const PACKAGES = [
 	// core
-	{ id: "web-access", category: "core", source: "npm:@moguw/pi-web-access", description: "网页搜索与页面抓取", hint: "为 Pi 提供 WebSearch 和 WebFetch 能力", postInstall: [{ jsonMerge: { path: "../web-search.json", value: { shortcuts: { curate: "ctrl+shift+f" }, workflow: "auto-summary", autoOpenBrowser: false } } }] },
-	{ id: "subagents", category: "core", source: "npm:pi-subagents", description: "子代理调度", hint: "为任务派生独立的 Pi 子进程作为子代理，上下文隔离，支持并行与后台运行。" },
-	{ id: "advisor", category: "core", source: "npm:@juicesharp/rpiv-advisor", description: "强模型顾问", hint: "随时向更强的模型请求顾问意见，取回计划、纠错或停止信号。" },
+	{ id: "web-access", category: "core", source: "npm:@moguw/pi-web-access", description: "网页搜索与页面抓取", hint: "为 Pi 提供 WebSearch 和 WebFetch 能力；个人偏好通过 workflow 预设安装。", loadBefore: ["lazy-tools"] },
+	{ id: "advisor", category: "core", source: "npm:pi-omp-advisor", description: "实时会话顾问", hint: "通过 /advisor 管理观察者，WATCHDOG.yml 定制模型与行为；默认随主会话观察，会产生额外模型调用。", conflicts: ["npm:@juicesharp/rpiv-advisor"] },
 	{ id: "workspace-history", category: "core", source: "npm:pi-workspace-history", description: "工作区回溯", hint: "回滚的不只是聊天记录——导航历史时同步恢复工作区文件，支持 /undo、/redo 与 /tree。" },
 	{ id: "goal", category: "core", source: "npm:@narumitw/pi-goal", description: "长期目标模式", hint: "用 /goal 设定目标，Pi 跨回合自主推进直至完成，支持暂停、恢复与队列。" },
 	{ id: "vision", category: "core", source: "npm:@getpipher/vision", description: "视觉能力", hint: "按主模型能力自动路由：多模态直读图片，纯文本模型才委托视觉模型分析。" },
 	// ui
 	{ id: "zentui", category: "ui", source: "npm:pi-zentui", description: "终端界面美化", hint: "Opencode 风格编辑框与消息样式，Starship 风格状态栏，四类界面元素独立配置。" },
 	{ id: "tool-display", category: "ui", source: "npm:@moguw/pi-tool-display", description: "工具输出渲染", hint: "紧凑渲染工具调用与 diff，自动折叠截断冗长输出，让终端更清爽。", postInstall: [{ requiresSelected: ["hashline-edit-pro"], jsonMerge: { path: "extensions/pi-tool-display/config.json", value: { registerToolOverrides: { read: false } } } }] },
-	{ id: "tps", category: "ui", source: "npm:@monotykamary/pi-tps", description: "生成速度与用量统计", hint: "每轮显示生成速度、首 Token 延迟、Token 用量与可用费用统计，/tps-export 导出数据。" },
-	{ id: "recap", category: "ui", source: "npm:@lanlance/pi-recap", description: "会话目标与进展摘要", hint: "用配置或当前会话模型生成状态摘要，/recap 手动刷新；会产生额外模型调用。" },
 	// tools
 	{ id: "interactive-shell", category: "tools", source: "npm:@moguw/pi-interactive-shell", description: "交互式 Shell 覆盖层", hint: "在可观察的覆盖层中运行长时间 CLI 与终端工作流。" },
-	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "模糊文件搜索", hint: "基于 FFF 的模糊文件与内容搜索，快速定位文件和代码。", setupCommands: ["export PI_FFF_MODE=override"], loadBefore: ["hashline-edit-pro"] },
-	{ id: "hashline-edit-pro", category: "tools", source: "npm:@moguw/pi-hashline-edit-pro", description: "哈希锚点编辑", hint: "用行级哈希锚点做精确的读取与编辑。" },
-	{ id: "codegraph", category: "tools", source: "npm:@estebanforge/pi-codegraph-enhanced", description: "代码结构导航", hint: "基于 Tree-sitter 索引的符号搜索、调用链与影响面分析，启动时自动建索引并同步。需全局安装 @colbymchenry/codegraph CLI。" },
-	{ id: "simplify", category: "tools", source: "npm:pi-simplify", description: "代码简化审查", hint: "审查最近改动的代码，追求清晰、一致与可维护。" },
+	{ id: "fff", category: "tools", source: "npm:@ff-labs/pi-fff", description: "模糊文件搜索", hint: "基于 FFF 的模糊文件与内容搜索，快速定位文件和代码；workflow 预设使用 tools-and-ui 模式。", loadBefore: ["hashline-edit-pro", "lazy-tools"] },
+	{ id: "hashline-edit-pro", category: "tools", source: "npm:@moguw/pi-hashline-edit-pro", description: "哈希锚点编辑", hint: "用行级哈希锚点做精确的读取与编辑。", loadBefore: ["lazy-tools"] },
 	{ id: "ponytail", category: "tools", source: "git:github.com/DietrichGebert/ponytail@v4.9.0", description: "极简编码准则", hint: "懒惰资深工程师模式：能不写的代码就不写，优先复用现有实现，保持安全底线。" },
-	{ id: "context7", category: "tools", source: "npm:@upstash/context7-pi", description: "最新库文档查询", hint: "通过 Context7 拉取任意库的最新文档与代码示例，训练数据过期时优先查询。可选 export CONTEXT7_API_KEY 提升配额。" },
+	{ id: "computer-use", category: "tools", source: "npm:@injaneity/pi-computer-use", description: "桌面界面操作", hint: "通过 /computer-use 检查桌面工具配置；macOS 需辅助功能与录屏权限，其他系统需可用的图形会话。", loadBefore: ["lazy-tools"] },
+	{ id: "lazy-tools", category: "tools", source: "npm:@moguw/pi-lazy-tools", description: "按需启用工具组", hint: "读取对应 Skill 后按需启用已注册工具；/capability 手动启用，/tools-status 查看状态，不自动安装缺失能力。" },
 	// herdr
 	{ id: "session-rename", category: "herdr", source: "npm:@moguw/pi-session-rename", description: "会话自动命名", hint: "根据对话上下文自动给会话起名，/rename 随时手动管理。" },
 	{ id: "session-migrate", category: "herdr", source: "npm:@moguw/pi-session-migrate", description: "会话迁移", hint: "项目挪路径后找回遗留会话，改写 cwd 迁入新位置，用 /migrate 执行。" },
 	{ id: "session-fork", category: "herdr", source: "npm:@moguw/pi-session-fork", description: "会话分叉", hint: "把当前会话分叉到 Herdr 窗格或标签页，/btw 内联或旁路追问。" },
 	// codex
-	{ id: "apply-patch", category: "codex", source: "git:github.com/code-yeongyu/pi-apply-patch", description: "Codex 补丁编辑", hint: "注册 Codex 的 apply_patch 工具，GPT 模型激活时替代 write/edit，支持增删改移。" },
+	{ id: "openai-tools", category: "codex", source: "npm:@moguw/pi-openai-tools", description: "OpenAI 上下文与补丁工具", hint: "整合上下文管理、远程压缩、Astra 兼容和 apply_patch；图像生成默认关闭，不应与独立 pi-apply-patch 同时加载。", loadBefore: ["lazy-tools"], conflicts: ["git:github.com/code-yeongyu/pi-apply-patch", "https://github.com/code-yeongyu/pi-apply-patch"] },
 	// themes
 	{ id: "vesper-dark", category: "themes", themeFiles: ["themes/vesper-dark.json"], description: "Vesper 暗色主题", hint: "暖桃与薄荷色调的近黑暗色主题；将 settings.theme 设为 \"vesper-dark\" 启用。" },
 	{ id: "vesper-light", category: "themes", themeFiles: ["themes/vesper-light.json"], description: "Vesper 亮色主题", hint: "暖米色底的亮色变体，桃色强调、薄荷点缀；将 settings.theme 设为 \"vesper-light\" 启用。" },
@@ -130,6 +127,24 @@ function packageVersion() {
 		return "0.0.0";
 	}
 }
+// Minimum Node version declared by `engines.node`, so the doctor check cannot drift from package.json.
+const MIN_NODE = (() => {
+	try {
+		return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).engines?.node || "";
+	} catch {
+		return "";
+	}
+})();
+export function meetsNodeRequirement(version, range = MIN_NODE) {
+	const wanted = (String(range).match(/\d+(\.\d+)*/) || [""])[0].split(".").map(Number);
+	if (!wanted[0]) return true;
+	const have = String(version).split(".").map(Number);
+	for (let i = 0; i < wanted.length; i++) {
+		const got = have[i] ?? 0;
+		if (got !== wanted[i]) return got > wanted[i];
+	}
+	return true;
+}
 function printHeader(text) {
 	console.log(`\n${bold(text)}`);
 }
@@ -165,6 +180,8 @@ function parseArgs(args) {
 		local: false,
 		yes: false,
 		force: false,
+		dryRun: false,
+		presets: [],
 		help: false,
 		version: false,
 		only: null,
@@ -183,6 +200,12 @@ function parseArgs(args) {
 		if (arg === "-l" || arg === "--local") flags.local = true;
 		else if (arg === "-y" || arg === "--yes") flags.yes = true;
 		else if (arg === "--force") flags.force = true;
+		else if (arg === "--dry-run") flags.dryRun = true;
+		else if (arg === "--preset" || arg.startsWith("--preset=")) {
+			const value = arg === "--preset" ? args[++i] : arg.slice("--preset=".length);
+			if (!value || value.startsWith("-")) throw new Error("--preset requires a built-in name or a manifest path");
+			flags.presets.push(value);
+		}
 		else if (arg === "-v" || arg === "--version") flags.version = true;
 		else if (arg === "-h" || arg === "--help") flags.help = true;
 		else if (arg === "--only") flags.only = parseList(args[++i]);
@@ -269,6 +292,8 @@ ${bold("Commands:")}
   doctor    Check the Pi extension environment
 
 ${bold("Install options:")}
+  --preset <name|file> Apply a built-in or external preset (repeatable; global only)
+  --dry-run           Preview a preset installation without any writes or installs
   --only <list>       Install only the given categories or extension ids
   --except <list>     Install everything except the given categories or ids
 	-l, --local         Install into the current project (.pi/settings.json)
@@ -279,6 +304,9 @@ ${bold("Install options:")}
 
 ${bold("Default behaviour:")}
   - Every catalog extension is installed by default.
+  - With --preset, only preset requirements and additional --only selections are installed.
+  - Built-in presets: base, ui, workflow. Later presets override earlier preferences.
+  - Presets cannot be combined with --local or --force; status --preset checks drift.
   - On a TTY, choose everything or review packages one by one with recommendation reasons.
   - With --yes, --force, --only, or --except interactive selection is skipped.
   - --force removes every installed Pi extension (settings backed up first), then reinstalls the selected catalog; file entries are resynced with a backup before overwrite.
@@ -292,7 +320,7 @@ ${bold("Examples:")}
   ${PACKAGE_COMMAND} --yes                        # everything, no prompt
   ${PACKAGE_COMMAND} --force                      # force reinstall everything
   ${PACKAGE_COMMAND} --only core                  # core extensions
-  ${PACKAGE_COMMAND} --only subagents,advisor     # selected extensions
+  ${PACKAGE_COMMAND} --only goal,advisor          # selected extensions
   ${PACKAGE_COMMAND} --only core --local          # project-local install
   ${PACKAGE_COMMAND} status
   ${PACKAGE_COMMAND} doctor`);
@@ -386,24 +414,6 @@ function readJsonObjectFile(path) {
 	} catch (err) {
 		return { exists: true, error: err instanceof Error ? err.message : String(err) };
 	}
-}
-
-function mergeJsonObjects(target, source) {
-	let changed = false;
-	for (const [key, sourceValue] of Object.entries(source)) {
-		const targetValue = target[key];
-		if (isJsonObject(sourceValue)) {
-			if (!isJsonObject(targetValue)) {
-				target[key] = {};
-				changed = true;
-			}
-			if (mergeJsonObjects(target[key], sourceValue)) changed = true;
-		} else if (!Object.is(targetValue, sourceValue)) {
-			target[key] = sourceValue;
-			changed = true;
-		}
-	}
-	return changed;
 }
 
 function applyJsonMergePostInstall(local, ownerId, rule) {
@@ -787,6 +797,103 @@ async function ensurePi(flags) {
 // ---------------------------------------------------------------------------
 // install
 // ---------------------------------------------------------------------------
+function installPiPackage(pkg, local = false) {
+	const env = pkg.source.startsWith("git:") ? { ...process.env, npm_config_ignore_scripts: "true" } : process.env;
+	return spawnCommand("pi", local ? ["install", "-l", pkg.source] : ["install", pkg.source], { stdio: "inherit", env }).status;
+}
+
+function assertNoPackageConflicts(selected, installedSources, local = false) {
+	if (!selected.some((pkg) => pkg.conflicts?.length)) return;
+	// Both scopes can load into the same Pi session; inspect, but never rewrite, the other scope.
+	const other = readInstalledSources(!local);
+	if (other.error) throw new Error(`Cannot check package conflicts in ${other.path}: invalid settings`);
+	const sources = new Set([...installedSources, ...other.sources, ...selected.map((pkg) => pkg.source).filter(Boolean)]);
+	for (const pkg of selected) {
+		for (const conflict of pkg.conflicts ?? []) {
+			if ([...sources].some((source) => source === conflict || source.startsWith(`${conflict}@`) || source === `${conflict}.git` || source.startsWith(`${conflict}.git@`))) {
+				throw new Error(`${pkg.id} conflicts with ${conflict}; remove the old registration explicitly before installing its replacement`);
+			}
+		}
+	}
+}
+
+async function cmdPresets(flags) {
+	if (!flags.presets.length) throw new Error("--dry-run requires --preset");
+	if (!["install", "status"].includes(flags.command)) throw new Error("--preset is supported by install and status only");
+	if (flags.local || flags.force) throw new Error("--preset cannot be combined with --local or --force");
+	if (flags.dryRun && flags.command !== "install") throw new Error("--dry-run is supported by install only");
+	if (flags.only && flags.except) throw new Error("Preset selection cannot combine --only and --except");
+	const presets = loadPresets(flags.presets, { builtinDir: repoFilePath("presets"), catalog: PACKAGES, home: homedir() });
+	const required = new Set(presets.flatMap((preset) => preset.packages));
+	const selectedIds = expandPackageDependencies(new Set([...required, ...(flags.only ? resolveSelection(flags) : [])]));
+	if (flags.except) {
+		validateSelectors(flags.except, "--except");
+		for (const pkg of PACKAGES) {
+			if (selectedIds.has(pkg.id) && matchesSelector(pkg, flags.except)) throw new Error(`--except conflicts with required package: ${pkg.id}`);
+		}
+	}
+	const selected = PACKAGES.filter((pkg) => selectedIds.has(pkg.id));
+	const roots = {
+		agentDir: agentConfigDir(),
+		webSearchDir: process.env.PI_CODING_AGENT_DIR ? agentConfigDir() : process.env.XDG_CONFIG_HOME ? join(process.env.XDG_CONFIG_HOME, "pi") : join(homedir(), ".pi"),
+		normalizeSettings: normalizePackageLoadOrderInSettings,
+	};
+	// One plan owns catalog files, user preferences and final compatibility constraints.
+	const operations = selected.flatMap((pkg) => entryFileTargets(pkg).map((file) => ({
+		to: file.kind === "theme" ? `agent/themes/${file.name}` : `agent/${file.name}`,
+		mode: "copy", value: readFileSync(file.sourcePath, "utf8"), owner: `catalog:${pkg.id}`,
+	})));
+	operations.push({ to: "agent/settings.json", mode: "merge", value: {}, owner: "catalog:load-order" });
+	operations.push(...presets.flatMap((preset) => preset.files));
+	for (const pkg of selected) {
+		for (const rule of pkg.postInstall ?? []) {
+			if (!(rule.requiresSelected ?? []).every((id) => selectedIds.has(id))) continue;
+			operations.push({ to: `agent/${rule.jsonMerge.path}`, mode: "merge", value: rule.jsonMerge.value, owner: `catalog:${pkg.id}`, constraint: true });
+		}
+	}
+	const plan = planConfiguration(operations, roots);
+	const installed = readInstalledSources(false);
+	if (installed.error) throw new Error(`Cannot read package registrations in ${installed.path}`);
+	assertNoPackageConflicts(selected, installed.sources);
+	const missing = selected.filter((pkg) => pkg.source && !installed.sources.has(pkg.source));
+	console.log(`Presets: ${presets.map((preset) => preset.name).join(" → ")}`);
+	for (const pkg of selected) {
+		const owners = presets.filter((preset) => preset.packages.includes(pkg.id)).map((preset) => preset.name);
+		console.log(`  package ${pkg.id} (${owners.join(", ") || "selection/dependency"})${missing.includes(pkg) ? " — missing" : ""}`);
+	}
+	for (const entry of plan) {
+		console.log(`  ${entry.changed ? entry.before === null ? "create" : "modify" : "unchanged"} ${entry.path}`);
+		for (const [field, owner] of entry.origins) console.log(`    ${field} ← ${owner}`);
+	}
+	if (process.env.PI_FFF_MODE && operations.some((op) => op.to === "agent/pi-fff.json")) console.warn("PI_FFF_MODE overrides pi-fff.json; unset it to use the preset's mode.");
+	if (flags.command === "status") return missing.length || plan.some((entry) => entry.changed) ? 1 : 0;
+	// Local and npm registrations are distinct in Pi; do not silently load two copies.
+	for (const source of installed.sources) {
+		if (!source.startsWith(".") && !source.startsWith("/") && !source.startsWith("~") && !win32.isAbsolute(source)) continue;
+		const directory = source.startsWith("~") ? resolveAgentConfigDir(source) : resolve(agentConfigDir(), source);
+		const name = readJsonSafe(join(directory, "package.json"))?.name;
+		if (name && missing.some((pkg) => pkg.source === `npm:${name}`)) throw new Error(`Local package ${name} is already registered; migrate its source explicitly before installing the npm preset requirement`);
+	}
+	if (flags.dryRun) {
+		console.log("Dry run: no packages installed and no files written.");
+		return 0;
+	}
+	if (missing.length && !(await ensurePi(flags))) return 127;
+	for (const pkg of missing) {
+		console.log(`→ pi install ${pkg.source}`);
+		if (installPiPackage(pkg) !== 0) {
+			console.error(`Failed to install ${pkg.id}; preset configuration was not written. Earlier package installs may have completed.`);
+			return 1;
+		}
+	}
+	const currentPlan = planConfiguration(operations, roots, plan);
+	const written = applyConfiguration(currentPlan);
+	for (const entry of written) console.log(`Applied ${entry.path}${entry.backup ? ` — Backup: ${entry.backup}` : ""}`);
+	console.log(written.length ? `Applied ${written.length} configuration file(s). Restart Pi to load all changes.` : "Configuration unchanged; no backups created.");
+	printSetupCommands(selected, false);
+	return 0;
+}
+
 async function cmdInstall(flags) {
 	let selectedIds = expandPackageDependencies(resolveSelection(flags));
 
@@ -822,9 +929,10 @@ async function cmdInstall(flags) {
 		return 0;
 	}
 
-	reportLoadOrderNormalization(normalizePackageLoadOrder(flags.local), interactive);
 	const { sources: installedSources, error: settingsError } = readInstalledSources(flags.local);
 	if (settingsError) log.warn(`Could not parse ${settingsPath(flags.local)} — ${settingsError}`);
+	assertNoPackageConflicts(selected, installedSources, flags.local);
+	reportLoadOrderNormalization(normalizePackageLoadOrder(flags.local), interactive);
 
 	const toInstall = selected.filter((pkg) => flags.force || (isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
 	const alreadyInstalled = selected.filter((pkg) => !(isFileInstall(pkg) ? fileInstallNeeded(pkg) : !isPackageInstalled(pkg, installedSources)));
@@ -852,7 +960,6 @@ async function cmdInstall(flags) {
 		return 0;
 	}
 
-	const piArgs = flags.local ? ["install", "-l"] : ["install"];
 	const failed = [];
 	for (const pkg of toInstall) {
 		if (isFileInstall(pkg)) {
@@ -872,10 +979,7 @@ async function cmdInstall(flags) {
 		const action = `pi install ${pkg.source}`;
 		if (interactive) log.step(action);
 		else console.log(`\n→ ${action}`);
-		const env = pkg.source.startsWith("git:")
-			? { ...process.env, npm_config_ignore_scripts: "true" }
-			: process.env;
-		const status = spawnCommand("pi", [...piArgs, pkg.source], { stdio: "inherit", env }).status;
+		const status = installPiPackage(pkg, flags.local);
 		if (status !== 0) {
 			failed.push(pkg);
 			if (interactive) log.error(`failed to install ${pkg.id}`);
@@ -1026,9 +1130,8 @@ function cmdDoctor(flags) {
 	};
 
 	printHeader("Environment");
-	const nodeMajor = Number(process.versions.node.split(".")[0]);
-	if (Number.isFinite(nodeMajor) && nodeMajor >= 20) pass(`Node ${process.versions.node}`);
-	else fail(`Node ${process.versions.node} — LazyPi requires Node >= 20`);
+	if (meetsNodeRequirement(process.versions.node)) pass(`Node ${process.versions.node}`);
+	else fail(`Node ${process.versions.node} — LazyPi requires Node ${MIN_NODE || ">= 20"}`);
 	if (hasCmd("npm")) pass("npm is on PATH");
 	else fail("npm is not on PATH — LazyPi can't install Pi for you");
 	if (hasCmd("git")) pass("git is on PATH");
@@ -1150,6 +1253,7 @@ async function main() {
 		console.log(packageVersion());
 		return 0;
 	}
+	if (flags.presets.length || flags.dryRun) return cmdPresets(flags);
 	switch (flags.command) {
 		case "install":
 			return cmdInstall(flags);

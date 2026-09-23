@@ -49,3 +49,15 @@ test("fff installs and loads before hashline-edit-pro", () => {
 	assert.equal(normalizePackageLoadOrderInSettings(settings), true);
 	assert.deepEqual(settings.packages, ["npm:@ff-labs/pi-fff", "npm:@moguw/pi-hashline-edit-pro"]);
 });
+
+test("tool providers load before lazy-tools while preserving package filters", () => {
+	const gate = PACKAGES.find((pkg) => pkg.id === "lazy-tools").source;
+	const providers = ["web-access", "fff", "hashline-edit-pro", "computer-use", "openai-tools"].map((id) => PACKAGES.find((pkg) => pkg.id === id).source);
+	const filtered = { source: providers[0], skills: [] };
+	const settings = { packages: [gate, filtered, ...providers.slice(1)] };
+	assert.equal(normalizePackageLoadOrderInSettings(settings), true);
+	const ordered = settings.packages.map((entry) => typeof entry === "string" ? entry : entry.source);
+	for (const source of providers) assert.ok(ordered.indexOf(source) < ordered.indexOf(gate));
+	assert.ok(settings.packages.includes(filtered));
+	assert.equal(normalizePackageLoadOrderInSettings(settings), false);
+});
